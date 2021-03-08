@@ -16,6 +16,7 @@ local failedManeuvers = Q{}
 Master_State = "Idle"
 Pet_State = "Idle"
 Hybrid_State = "Idle"
+Casting_State = false
 
 --Various timers
 Flashbulb_Timer = 45
@@ -50,15 +51,24 @@ SC["Sharpshot Frame"] = {}
 SC["Harlequin Frame"] = {}
 SC["Stormwaker Frame"] = {}
 
-SC["Valoredge Frame"]["Stringing Pummel"] = "String Shredder"
-SC["Valoredge Frame"]["Victory Smite"] = "String Shredder"
 SC["Valoredge Frame"]["Shijin Spiral"] = "Bone Crusher"
+SC["Valoredge Frame"]["Ascetic's Fury "] = "Bone Crusher"
+SC["Valoredge Frame"]["Final Heaven"] = "Bone Crusher"
 SC["Valoredge Frame"]["Howling Fist"] = "String Shredder"
+SC["Valoredge Frame"]["Final Heaven"] = "String Shredder"
+SC["Valoredge Frame"]["Victory Smite"] = "String Shredder"
+SC["Valoredge Frame"]["Stringing Pummel"] = "String Shredder"
+SC["Valoredge Frame"]["Asuran Fists"] = "String Shredder"
+SC["Valoredge Frame"]["Dragon Kick"] = "String Shredder"
 
 SC["Sharpshot Frame"]["Stringing Pummel"] = "Armor Shatterer"
 SC["Sharpshot Frame"]["Victory Smite"] = "Armor Shatterer"
 SC["Sharpshot Frame"]["Shijin Spiral"] = "Armor Piercer"
+SC["Sharpshot Frame"]["Asuran Fists"] = "Armor Shatterer"
 SC["Sharpshot Frame"]["Howling Fist"] = "Arcuballista"
+SC["Sharpshot Frame"]["Raging Fists"] = "Arcuballista"
+SC["Sharpshot Frame"]["Tornado Kick"] = "Arcuballista"
+
 SC["Sharpshot Frame"]["Dragon Kick"] = "Armor Shatterer"
 SC["Sharpshot Frame"]["One Inch Punch"] = "Daze"
 SC["Sharpshot Frame"]["Spinning Attack"] = "Armor Shatterer"
@@ -276,7 +286,7 @@ function setupTextWindow(pos_x, pos_y)
     default_settings.flags.italic = false
     default_settings.padding = 10
     default_settings.text = {}
-    default_settings.text.size = 12
+    default_settings.text.size = 8
     default_settings.text.font = 'Arial'
     default_settings.text.fonts = {}
     default_settings.text.alpha = 255
@@ -454,8 +464,8 @@ function TotalSCalc()
             Hybrid_State = const_stateIdle
         elseif state.PetStyleCycle.value ~= "DD" and state.PetStyleCycle.value ~= "SPAM" then --TANK and auto sets to hybrid to DD since we are not using style DD or SPAM
             Hybrid_State = const_tank
-            handle_set({"IdleMode", "Idle"})
-            handle_set({"HybridMode", "DT"})
+            -- handle_set({"IdleMode", "Idle"})
+            --handle_set({"HybridMode", "DT"})
         end
     --Figures out state when Pet Mode is MAGE
     elseif state.PetModeCycle.current == const_mage then
@@ -463,7 +473,7 @@ function TotalSCalc()
             Hybrid_State = const_stateIdle
         else
             Hybrid_State = const_masterOnly --Master Only Offense Mode
-            handle_set({"OffenseMode", "Master"})
+            handle_set({"OffenseMode", state.OffenseMode.current})
         end
     end
 
@@ -560,7 +570,7 @@ function determinePuppetType()
     elseif head == SpiritHead then -- Spiritweaver Prediction
         if frame == StormFrame then -- BLM
             handle_set({const_PetModeCycle, const_mage})
-            handle_set({const_PetStyleCycle, const_dd})
+            handle_set({const_PetStyleCycle, "MB"})
         else
             msg("Unable to determine Mode/Style for Puppet Head: (" .. head .. ") Puppet Frame: (" .. frame .. ")")
         end
@@ -611,7 +621,8 @@ function user_customize_idle_set(idleSet)
         if state.HybridMode.current == "Normal" then --If Hybrid Mode is Normal then simply return the set
             return idleSet
         else
-            idleSet = sets.idle.Pet.Engaged[state.HybridMode.current] --When Pet is engaged we pass in the Hybrid Mode to match to an existing set
+            --idleSet = sets.idle.Pet.Engaged[state.HybridMode.current] --When Pet is engaged we pass in the Hybrid Mode to match to an existing set
+			idleSet = sets.engaged[state.OffenseMode.current][state.HybridMode.current]
             return idleSet
         end
     else --Otherwise return the idleSet with no changes from us
@@ -622,17 +633,23 @@ end
 --Used to determine what Hybrid Mode to use when Player is engaged for trusts only and Pet is Engaged
 function user_customize_melee_set(meleeSet)
     
-    if (Master_State:lower() == const_stateEngaged:lower() and state.OffenseMode.value == "Trusts") and Pet_State:lower() == const_stateEngaged:lower() then
+    if (Master_State:lower() == const_stateEngaged:lower()) and Pet_State:lower() == const_stateEngaged:lower() then
         if state.HybridMode.current == "Normal" then --If Hybrid Mode is Normal then simply return the set
-            meleeSet = sets.idle.Pet.Engaged
+            --meleeSet = sets.idle.Pet.Engaged
+			meleeSet = sets.engaged[state.OffenseMode.current][state.HybridMode.current]
             return meleeSet
         else
-            meleeSet = sets.idle.Pet.Engaged[state.HybridMode.current] --When Pet is engaged we pass in the Hybrid Mode to match to an existing set
+            --meleeSet = sets.idle.Pet.Engaged[state.HybridMode.current] --When Pet is engaged we pass in the Hybrid Mode to match to an existing set
+			meleeSet = sets.engaged[state.OffenseMode.current][state.HybridMode.current]
             return meleeSet
         end
     else --Otherwise return the idleSet with no changes from us
         return meleeSet
     end
+end
+
+function job_pet_midcast(spell, action, spellMap, eventArgs)
+	Casting_State = true
 end
 
 function job_precast(spell, action, spellMap, eventArgs)
@@ -645,11 +662,15 @@ function job_precast(spell, action, spellMap, eventArgs)
         equip(sets.precast.JA[spell.english])
     elseif sets.precast.WS[spell.english] then
         equip(sets.precast.WS[spell.english])
-    elseif pet.isvalid then
-        if spell.english == "Deploy" and pet.tp >= 950 then
-            equip(sets.midcast.Pet.WSNoFTP)
-            eventArgs.handled = true
-        end
+    --elseif pet.isvalid then
+		--if spell.english == "Deploy" then
+			--if state.PetModeCycle.value:lower() ~= "mage" then
+				--if pet.tp >= 950 then
+		            --equip(sets.midcast.Pet.WSNoFTP)
+		            --eventArgs.handled = true
+				--end
+			--end
+        --end
     end
 end
 
@@ -672,8 +693,9 @@ function job_aftercast(spell, action, spellMap, eventArgs)
         failedManeuvers:push(spell)
     end
 
-    if pet.isvalid then
+    if pet.isvalid and ((state.PetModeCycle.value:lower() ~= 'mage' and state.PetModeCycle.value:lower() ~= "tank") or state.PetStyleCycleTank.value:lower() == 'spam') then
         if SC[pet.frame][spell.english] and pet.tp >= 850 and Pet_State == "Engaged" then
+		
             ws = SC[pet.frame][spell.english]
             modif = Modifier[ws]
 
@@ -690,10 +712,12 @@ function job_aftercast(spell, action, spellMap, eventArgs)
             startWeaponSkillPetTimer()
             eventArgs.handled = true
         else
-            handle_equipping_gear(player.status, Pet_State)
+			handle_equipping_gear(player.status, Pet_State)
+			--equip(sets.engaged[state.OffenseMode.current][state.HybridMode.current])
         end
     else
-        handle_equipping_gear(player.status, Pet_State)
+		handle_equipping_gear(player.status, Pet_State)
+		--equip(sets.engaged[state.OffenseMode.current][state.HybridMode.current])
     end
 end
 
@@ -726,18 +750,27 @@ function job_status_change(new, old)
     end
 
     handle_equipping_gear(player.status, Pet_State)
+	--equip(sets.engaged[state.OffenseMode.current][state.HybridMode.current])
 end
 
-function job_pet_status_change(new, old)
+function job_pet_status_change(new, old, eventArgs)
     if new == "Engaged" then
         Pet_State = const_stateEngaged
         TotalSCalc()
+		
+		-- If mage style is set to MB... I am probably trying to reserve pet to strictly do MB after engaging on SC.
+		-- This will prevent conflicts from job_pet_midcast?
+		if state.PetStyleCycleMage.value:lower() == 'mb' then
+			equip(sets.midcast.Pet["Elemental Magic"])
+			--eventArgs.handled = true
+		else 
+			handle_equipping_gear(player.status, Pet_State)
+			--equip(sets.engaged[state.OffenseMode.current][state.HybridMode.current])
+		end
     else
         Pet_State = const_stateIdle
         TotalSCalc()
     end
-
-    handle_equipping_gear(player.status, Pet_State)
 end
 
 --Pet Weapon Skills we are checking against in job_pet_aftercast
@@ -758,12 +791,15 @@ AutomatonWeaponSkills =
 }
 
 function job_pet_aftercast(spell)
+	Casting_State = false	
+	
     --If pet just finished a weapon skill we want to temporarily block it from going back into weapon skill gear
     if table.contains(AutomatonWeaponSkills, spell.name) then
         justFinishedWeaponSkill = true
     end
 
     handle_equipping_gear(player.status, pet.status)
+	--equip(sets.engaged[state.OffenseMode.current][state.HybridMode.current])
 end
 
 --Anytime you change equipment you need to set eventArgs.handled or else you may get overwritten
@@ -956,6 +992,11 @@ windower.register_event(
 
         --Items we want to check every second
         if os.time() > time_start then
+			
+			if Casting_State then
+				--return
+			end
+			
             time_start = os.time()
 
             calculatePetTpPerSec()
@@ -1012,8 +1053,13 @@ windower.register_event(
                 end 
 
                 --We only want this to activate if we are actually running the timer for the pet weapon skill
-                if pet.tp ~= nil then
-                    if pet.tp >= 1000 and petWeaponSkillRecast <= 0 and startedPetWeaponSkillTimer == true then
+                if pet.tp ~= nil and state.PetModeCycle.value:lower() ~= "mage" and state.PetModeCycle.value:lower() ~= "tank" then
+                    if pet.tp >= 1000 and petWeaponSkillRecast <= 0 and startedPetWeaponSkillTimer == true and 
+						(state.PetStyleCycle.value:lower() == "spam" 
+	                     or state.PetStyleCycle.value:lower() == "dd" 
+	                     or state.PetModeCycle.value:lower() == "dd" 
+	                     or state.PetStyleCycle.value:lower() == "bone") 
+					then
                         --We have passed the allowed time without the puppet using a weapon skill, locking till next round
                         petWeaponSkillRecast = 0
                         petWeaponSkillLock = true
@@ -1029,23 +1075,29 @@ windower.register_event(
             --pet style is SPAM or DD
             --Otherwise this is handled for when the player is fighting with pet in job_aftercast
             if
-                pet.isvalid and
+                pet.isvalid and state.PetModeCycle.value:lower() ~= "mage" and state.PetModeCycle.value:lower() ~= "tank" and
                     (state.PetStyleCycle.value:lower() == "spam" 
                      or state.PetStyleCycle.value:lower() == "dd" 
                      or state.PetModeCycle.value:lower() == "dd" 
-                     or state.PetStyleCycle.value:lower() == "bone") and
-                    (Master_State:lower() == "idle" or state.OffenseMode.value == "Trusts")
+                     or state.PetStyleCycle.value:lower() == "bone")
+                    and (Master_State:lower() == "idle")
+					and pet.status == 'Engaged'
              then
                 --Now if pet has more than 1000 tp and pet is engaged and didn't just finish a weaponskill and we have not locked the pet out this set
                 if
-                    pet.tp >= 850 and Pet_State == const_stateEngaged and justFinishedWeaponSkill == false and
+                    pet.tp >= 850 and justFinishedWeaponSkill == false and
                         petWeaponSkillLock == false
                  then
-                    if state.SetFTP.value then
-                        equip(set_combine(sets.midcast.Pet.WSFTP))
-                    else
-                        equip(set_combine(sets.midcast.Pet.WSNoFTP))
-                    end
+
+					if pet.frame == "Valoredge Frame" then
+						equip(sets.DD.BONE)
+					else
+						if state.SetFTP.value then
+	                        equip(set_combine(sets.midcast.Pet.WSFTP))
+	                    else
+	                        equip(set_combine(sets.midcast.Pet.WSNoFTP))
+	                    end
+					end
 
                     startWeaponSkillPetTimer()
                 end
@@ -1109,19 +1161,23 @@ windower.register_event(
         -- Checking timer for enmity sets
         if buffactive["Fire Maneuver"] then
             if original:contains(pet.name) and original:contains("Provoke") then
-                add_to_chat(204, "*-*-*-*-*-*-*-*-* [ Strobe done ] *-*-*-*-*-*-*-*-*")
-                Strobe_Time = os.time()
+				Strobe_Time = os.time()
                 Strobe_Recast = Strobe_Timer
+				
+                add_to_chat(204, "*-*-*-*-*-*-*-*-* [ Strobe done ] *-*-*-*-*-*-*-*-*")
                 handle_equipping_gear(player.status, pet.status)
+				--equip(sets.engaged[state.OffenseMode.current][state.HybridMode.current])
             end
         end
 
         if buffactive["Light Maneuver"] then
             if original:contains(pet.name) and original:contains("Flashbulb") then
-                add_to_chat(204, "*-*-*-*-*-*-*-*-* [ Flashbulb done ] *-*-*-*-*-*-*-*-*")
-                Flashbulb_Time = os.time()
+				Flashbulb_Time = os.time()
                 Flashbulb_Recast = Flashbulb_Timer
+				
+                add_to_chat(204, "*-*-*-*-*-*-*-*-* [ Flashbulb done ] *-*-*-*-*-*-*-*-*")
                 handle_equipping_gear(player.status, pet.status)
+				--equip(sets.engaged[state.OffenseMode.current][state.HybridMode.current])
             end
         end
 
@@ -1167,6 +1223,7 @@ function job_state_change(stateField, newValue, oldValue)
 
         --Update gear
         handle_equipping_gear(player.status, Pet_State)
+		--equip(sets.engaged[state.OffenseMode.current][state.HybridMode.current])
     elseif stateField == const_PetStyleCycle then
         main_text_hub.pet_current_style = newValue
     elseif stateField == "Auto Maneuver" then --Updates HUB for Auto Maneuver
@@ -1240,6 +1297,7 @@ function job_state_change(stateField, newValue, oldValue)
             main_text_hub.toggle_custom_gear_lock = const_off
             enable(customGearLock)
             handle_equipping_gear(player.status, Pet_State)
+			--equip(sets.engaged[state.OffenseMode.current][state.HybridMode.current])
         end
     elseif stateField == 'Auto Deploy' then --Updates HUB for Auto Deploy
         if newValue == true then
@@ -1292,6 +1350,7 @@ function display_current_job_state(eventArgs)
     TotalSCalc()
     determinePuppetType()
     handle_equipping_gear(player.status, Pet_State)
+	--equip(sets.engaged[state.OffenseMode.current][state.HybridMode.current])
 
     add_to_chat(122, msg)
 end
