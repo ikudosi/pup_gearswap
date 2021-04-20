@@ -16,7 +16,6 @@ local failedManeuvers = Q{}
 Master_State = "Idle"
 Pet_State = "Idle"
 Hybrid_State = "Idle"
-Casting_State = false
 
 --Various timers
 Flashbulb_Timer = 45
@@ -649,7 +648,9 @@ function user_customize_melee_set(meleeSet)
 end
 
 function job_pet_midcast(spell, action, spellMap, eventArgs)
-	Casting_State = true
+	if state.PetStyleCycleMage.value:lower() ~= 'mb' then
+		eventArgs.handled = true
+	end
 end
 
 function job_precast(spell, action, spellMap, eventArgs)
@@ -692,16 +693,15 @@ function job_aftercast(spell, action, spellMap, eventArgs)
     if string.find(spell.english, "Maneuver") and spell.interrupted == true and failedManeuvers:length() <= 3 then
         failedManeuvers:push(spell)
     end
-
-    if pet.isvalid and ((state.PetModeCycle.value:lower() ~= 'mage' and state.PetModeCycle.value:lower() ~= "tank") or state.PetStyleCycleTank.value:lower() == 'spam') then
+	
+    if pet.isvalid and ((state.PetModeCycle.value:lower() ~= 'mage' and state.PetModeCycle.value:lower() ~= "tank") and state.PetStyleCycleTank.value:lower() ~= 'spam') then
         if SC[pet.frame][spell.english] and pet.tp >= 850 and Pet_State == "Engaged" then
-		
             ws = SC[pet.frame][spell.english]
             modif = Modifier[ws]
 
             --If its a valid modif
             if modif then
-                equip(sets.midcast.Pet.WS[modif])
+                equip(sets.midcast.Pet.WS[modif])6
             else --Otherwise equip the default Weapon Skill Set
                 equip(sets.midcast.Pet.WSNoFTP)
             end
@@ -791,8 +791,7 @@ AutomatonWeaponSkills =
 }
 
 function job_pet_aftercast(spell)
-	Casting_State = false	
-	
+
     --If pet just finished a weapon skill we want to temporarily block it from going back into weapon skill gear
     if table.contains(AutomatonWeaponSkills, spell.name) then
         justFinishedWeaponSkill = true
@@ -993,10 +992,6 @@ windower.register_event(
         --Items we want to check every second
         if os.time() > time_start then
 			
-			if Casting_State then
-				--return
-			end
-			
             time_start = os.time()
 
             calculatePetTpPerSec()
@@ -1055,7 +1050,7 @@ windower.register_event(
                 --We only want this to activate if we are actually running the timer for the pet weapon skill
                 if pet.tp ~= nil and state.PetModeCycle.value:lower() ~= "mage" and state.PetModeCycle.value:lower() ~= "tank" then
                     if pet.tp >= 1000 and petWeaponSkillRecast <= 0 and startedPetWeaponSkillTimer == true and 
-						(state.PetStyleCycle.value:lower() == "spam" 
+						(state.PetStyleCycle.value:lower() ~= "spam" 
 	                     or state.PetStyleCycle.value:lower() == "dd" 
 	                     or state.PetModeCycle.value:lower() == "dd" 
 	                     or state.PetStyleCycle.value:lower() == "bone") 
@@ -1076,7 +1071,7 @@ windower.register_event(
             --Otherwise this is handled for when the player is fighting with pet in job_aftercast
             if
                 pet.isvalid and state.PetModeCycle.value:lower() ~= "mage" and state.PetModeCycle.value:lower() ~= "tank" and
-                    (state.PetStyleCycle.value:lower() == "spam" 
+                    (state.PetStyleCycle.value:lower() ~= "spam" 
                      or state.PetStyleCycle.value:lower() == "dd" 
                      or state.PetModeCycle.value:lower() == "dd" 
                      or state.PetStyleCycle.value:lower() == "bone")
@@ -1089,7 +1084,7 @@ windower.register_event(
                         petWeaponSkillLock == false
                  then
 
-					if pet.frame == "Valoredge Frame" then
+					if pet.frame == "Valoredge Frame" and not state.SetFTP.value then
 						equip(sets.DD.BONE)
 					else
 						if state.SetFTP.value then
@@ -1103,7 +1098,7 @@ windower.register_event(
                 end
             end
 
-            if state.PetModeCycle.value == const_tank and Pet_State == const_stateEngaged then
+            if state.PetModeCycle.value == const_tank and Pet_State == const_stateEngaged and state.PetModeCycle.value:lower() == "tank" then
                 if buffactive["Fire Maneuver"] and (pet.attachments.strobe or pet.attachments["strobe II"]) then
                     if Strobe_Recast <= 2 then
                         equip(sets.pet.Enmity)
