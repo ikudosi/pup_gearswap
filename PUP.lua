@@ -254,7 +254,7 @@ function init_gear_sets()
     Artifact_Foire.Body_WSD_PTank = "Foire Tobe +1"
     Artifact_Foire.Hands_Mane_Overload = "Foire Dastanas +1"
     Artifact_Foire.Legs_PCure = "Foire Churidars +1"
-    Artifact_Foire.Feet_Repair_PMagic = "Foire Babouches +2"
+    Artifact_Foire.Feet_Repair_PMagic = "Foire Babouches +3"
 
     Relic_Pitre = {}
     Relic_Pitre.Head_PRegen = "Pitre Taj +2" --Enhances Optimization
@@ -457,9 +457,9 @@ function init_gear_sets()
     sets.precast.Waltz["Healing Waltz"] = {}
 	
 	sets.master_accessories = {
-		ring1="Apate Ring",
+		ring1="Niqmaddu Ring",
 		ring2="Gere Ring",
-		ear1="Schere Earring",
+		ear1="Mache Earring +1",
 		ear2="Cessance Earring",
 		waist="Moonbow Belt +1",
 		back=Visucius.WSDEX
@@ -478,12 +478,12 @@ function init_gear_sets()
     -- Weaponskill sets
     -- Default set for any weaponskill that isn't any more specifically defined
     sets.precast.WS = {
-       	legs="Mpaca's Cap",
+       	head="Mpaca's Cap",
 		body="Mpaca's Doublet",
 		hands="Mpaca's Gloves",
 		legs="Mpaca's Hose",
 		feet="Mpaca's Boots",
-		ring2="Apate Ring",
+		ring2="Niqmaddu Ring",
 		ring1="Gere Ring",
 		neck="Fotia Gorget",
 		ear1="Schere Earring",
@@ -514,14 +514,14 @@ function init_gear_sets()
 	})
 	
 	sets.precast.WS["Aeolian Edge"] = set_combine(sets.precast.WS, {
-		left_ear="Friomisi Earring",
-		right_ear="Moonshade Earring",
-		neck="Baetyl Pendant",
-		waist="Eschan Stone",
 		body="Cohort Cloak +1",
-		hands={ name="Herculean Gloves", augments={'Mag. Acc.+16 "Mag.Atk.Bns."+16','Crit.hit rate+2','Mag. Acc.+15','"Mag.Atk.Bns."+15',}},
-    	legs={ name="Herculean Trousers", augments={'Mag. Acc.+19 "Mag.Atk.Bns."+19','Phys. dmg. taken -2%','STR+1','Mag. Acc.+2','"Mag.Atk.Bns."+13',}},
-    	feet={ name="Herculean Boots", augments={'Mag. Acc.+19 "Mag.Atk.Bns."+19','"Mag.Atk.Bns."+14',}},
+		neck="Baetyl Pendant",
+		hands={name="Nyame Gauntlets"},
+		legs="Nyame Flanchard",
+		feet="Nyame Sollerets",
+		waist="Eschan Stone",
+		ear1="Friomisi Earring",
+		ear2="Moonshade Earring",
 		back="Kaikias' Cape"
 	})
 
@@ -539,11 +539,11 @@ function init_gear_sets()
 		feet="Mpaca's Boots",
 		neck="Shulmanu Collar",
 		waist="Moonbow Belt +1",
-		back=Visucius.TP,
+		back=Visucius.WSDEX,
 		ring1="Gere Ring",
-		ring2="Cath Palug Ring",
-		ear1="Rimeice Earring",
-		ear2="Enmerkar Earring",
+		ring2="Niqmaddu Ring",
+		ear1="Mache Earring +1",
+		ear2="Cessance Earring",
     }
 
     -------------------------------------
