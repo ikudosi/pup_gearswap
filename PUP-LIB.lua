@@ -694,14 +694,14 @@ function job_aftercast(spell, action, spellMap, eventArgs)
         failedManeuvers:push(spell)
     end
 	
-    if pet.isvalid and ((state.PetModeCycle.value:lower() ~= 'mage' and state.PetModeCycle.value:lower() ~= "tank") and state.PetStyleCycleTank.value:lower() ~= 'spam') then
+    if pet.isvalid and ((state.PetModeCycle.value ~= 'MAGE' and state.PetModeCycle.value ~= "TANK") and  state.PetStyleCycleDD.value ~= 'SPAM') then
         if SC[pet.frame][spell.english] and pet.tp >= 850 and Pet_State == "Engaged" then
             ws = SC[pet.frame][spell.english]
             modif = Modifier[ws]
 
             --If its a valid modif
             if modif then
-                equip(sets.midcast.Pet.WS[modif])6
+                equip(sets.midcast.Pet.WS[modif])
             else --Otherwise equip the default Weapon Skill Set
                 equip(sets.midcast.Pet.WSNoFTP)
             end
