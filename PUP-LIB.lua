@@ -760,7 +760,7 @@ function job_pet_status_change(new, old, eventArgs)
 		
 		-- If mage style is set to MB... I am probably trying to reserve pet to strictly do MB after engaging on SC.
 		-- This will prevent conflicts from job_pet_midcast?
-		if state.PetStyleCycleMage.value:lower() == 'mb' then
+		if state.PetModeCycle.value:lower() == 'mage' and state.PetStyleCycleMage.value:lower() == 'mb' then
 			equip(sets.midcast.Pet["Elemental Magic"])
 			--eventArgs.handled = true
 		else 
@@ -1052,7 +1052,8 @@ windower.register_event(
                     if pet.tp >= 1000 and petWeaponSkillRecast <= 0 and startedPetWeaponSkillTimer == true and 
 						(state.PetStyleCycle.value:lower() ~= "spam" 
 	                     or state.PetStyleCycle.value:lower() == "dd" 
-	                     or state.PetModeCycle.value:lower() == "dd" 
+	                     or state.PetModeCycle.value:lower() == "dd"
+						 or state.PetStyleCycle.value:lower() == "od"
 	                     or state.PetStyleCycle.value:lower() == "bone") 
 					then
                         --We have passed the allowed time without the puppet using a weapon skill, locking till next round
@@ -1074,6 +1075,7 @@ windower.register_event(
                     (state.PetStyleCycle.value:lower() ~= "spam" 
                      or state.PetStyleCycle.value:lower() == "dd" 
                      or state.PetModeCycle.value:lower() == "dd" 
+					 or state.PetStyleCycle.value:lower() == "od"
                      or state.PetStyleCycle.value:lower() == "bone")
                     and (Master_State:lower() == "idle")
 					and pet.status == 'Engaged'
