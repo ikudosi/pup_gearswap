@@ -69,7 +69,7 @@ function user_setup()
         
         Will automatically set IdleMode to Idle when Pet becomes Engaged and you are Idle
     ]]
-    state.IdleMode:options("Mpaca", "Malignance", "PetTP", "PetEnmity", "Rao")
+    state.IdleMode:options("Mpaca", "Malignance", "PetTP", "PetEnmity", "Rao", "PetMage")
 
     --Various Cycles for the different types of PetModes
     state.PetStyleCycleTank = M {"NORMAL", "DD", "MAGIC", "SPAM"}
@@ -167,6 +167,7 @@ function user_setup()
     send_command("bind ^f7 gs c cycleback PetModeCycle")
     send_command("bind !f8 gs c cycle PetStyleCycle")
     send_command("bind ^f8 gs c cycleback PetStyleCycle")
+	send_command('bind !f9 gs c cycleback OffenseMode')
 	send_command("bind !f10 gs c cycleback PhysicalDefenseMode")
     send_command("bind !e gs c toggle AutoMan")
     send_command("bind !d gs c toggle LockPetDT")
@@ -193,6 +194,7 @@ function file_unload()
     send_command("unbind ^f7")
     send_command("unbind !f8")
     send_command("unbind ^f8")
+	send_command('unbind !f9')
     send_command("unbind !e")
     send_command("unbind !d")
     send_command("unbind !f6")
@@ -236,11 +238,11 @@ function init_gear_sets()
 		head="Heyoka Cap",
 		body="Heyoka Harness",
        	hands="Heyoka Mittens",
-	   	legs="Heyoka Subligar",
+	   	legs="Heyoka Subligar +1",
 	   	feet="Heyoka Leggings",
 	   	left_ear="Rimeice Earring",
 		right_ear="Domes. Earring",
-		neck="Shulmanu Collar",
+		neck="Pup. Collar +2",
 	}
 	
     Animators = {}
@@ -313,7 +315,7 @@ function init_gear_sets()
 		ring2="Thurandaut Ring",
 		ear1="Enmerkar Earring",
 		ear2="Rimeice Earring",
-		neck="Shulmanu Collar",
+		neck="Pup. Collar +2",
 		back=Visucius.TP,
 		waist="Klouskap Sash +1"
 	}
@@ -324,6 +326,7 @@ function init_gear_sets()
 		hands={name="Taeon Gloves"},
 		legs={name="Taeon Tights"},
 		feet={name="Taeon Boots"},
+		neck="Shulmanu Collar",
 	})
 	
 	OD_GEAR=set_combine(PET_TP_GEAR, {
@@ -342,14 +345,14 @@ function init_gear_sets()
        	head="Malignance Chapeau",
 		body="Malignance Tabard",
 		hands="Malignance Gloves",
-		legs="Mpaca's Hose",
+		legs="Malignance Tights",
 		feet="Malignance Boots",
 		ring1="Cath Palug Ring",
 		ring2="Thurandaut Ring",
 		ear1="Enmerkar Earring",
 		ear2="Rimeice Earring",
 		waist="Moonbow Belt +1",
-		neck="Shulmanu Collar",
+		neck="Loricate Torque +1",
     }
 	
 	-- Used when doing skillchains and you have bonecrusher setup
@@ -457,9 +460,10 @@ function init_gear_sets()
     sets.precast.Waltz["Healing Waltz"] = {}
 	
 	sets.master_accessories = {
+		neck="Pup. Collar +2",
 		ring1="Niqmaddu Ring",
 		ring2="Gere Ring",
-		ear1="Mache Earring +1",
+		ear1="Schere Earring",
 		ear2="Cessance Earring",
 		waist="Moonbow Belt +1",
 		back=Visucius.WSDEX
@@ -468,7 +472,7 @@ function init_gear_sets()
 	sets.pet_accessories = {
 		ring1="Cath Palug Ring",
 	   	ring2="Thurandaut Ring",
-	   	waist="Klouskap Sash +1",
+		waist="Klouskap Sash +1",
 		ear1="Rimeice Earring",
 		ear2="Enmerkar Earring",
 		back=Visucius.TP,
@@ -483,6 +487,7 @@ function init_gear_sets()
 		hands="Mpaca's Gloves",
 		legs="Mpaca's Hose",
 		feet="Mpaca's Boots",
+		neck="Pup. Collar +2",
 		ring2="Niqmaddu Ring",
 		ring1="Gere Ring",
 		neck="Fotia Gorget",
@@ -514,12 +519,13 @@ function init_gear_sets()
 	})
 	
 	sets.precast.WS["Aeolian Edge"] = set_combine(sets.precast.WS, {
+		head="",
 		body="Cohort Cloak +1",
 		neck="Baetyl Pendant",
 		hands={name="Nyame Gauntlets"},
 		legs="Nyame Flanchard",
 		feet="Nyame Sollerets",
-		waist="Eschan Stone",
+		waist="Orpheus's Sash",
 		ear1="Friomisi Earring",
 		ear2="Moonshade Earring",
 		back="Kaikias' Cape"
@@ -537,12 +543,12 @@ function init_gear_sets()
 		hands="Mpaca's Gloves",
 		legs="Mpaca's Hose",
 		feet="Mpaca's Boots",
-		neck="Shulmanu Collar",
+		neck="Pup. Collar +2",
 		waist="Moonbow Belt +1",
 		back=Visucius.WSDEX,
 		ring1="Gere Ring",
 		ring2="Niqmaddu Ring",
-		ear1="Mache Earring +1",
+		ear1="Schere Earring",
 		ear2="Cessance Earring",
     }
 
@@ -559,7 +565,10 @@ function init_gear_sets()
         Hybrid Mode = Pet
     ]]
 	
-    sets.engaged.Mpaca.Pet = set_combine(sets.engaged.Mpaca, sets.pet_accessories)
+    sets.engaged.Mpaca.Pet = set_combine(sets.engaged.Mpaca, set_combine(sets.pet_accessories, {
+		legs="Heyoka Subligar +1",
+		waist="Moonbow Belt +1"
+	}))
 	
 	-------------------------------------
     --[[
@@ -571,7 +580,7 @@ function init_gear_sets()
 		head="Heyoka Cap",
 		body="Heyoka Harness",
        	hands="Heyoka Mittens",
-	   	legs="Heyoka Subligar",
+	   	legs="Heyoka Subligar +1",
 	   	feet="Heyoka Leggings",
 	})
 
@@ -621,7 +630,10 @@ function init_gear_sets()
 	
 	sets.engaged.Malignance = set_combine(DT_GEAR, {})
 	sets.engaged.Malignance.Master = set_combine(DT_GEAR, sets.master_accessories)
-	sets.engaged.Malignance.Pet = set_combine(DT_GEAR, sets.pet_accessories)
+	sets.engaged.Malignance.Pet = set_combine(DT_GEAR, set_combine(sets.pet_accessories, {
+		legs="Heyoka Subligar +1",
+		waist="Moonbow Belt +1"
+	}))
 
     ----------------------------------------------------------------
     --  _____     _      ____        _          _____      _
@@ -649,7 +661,7 @@ function init_gear_sets()
 
     sets.midcast.Pet["Elemental Magic"] = {
        	head={ name="Herculean Helm", augments={'Pet: "Mag.Atk.Bns."+30','Pet: "Regen"+3','Pet: INT+7',}},
-	    body={ name="Herculean Vest", augments={'Pet: "Mag.Atk.Bns."+28'}},
+	    body={ name="Herculean Vest", augments={'Pet: "Mag.Atk.Bns."+30',}},
 	    hands={ name="Herculean Gloves", augments={'Pet: "Mag.Atk.Bns."+30','"Store TP"+1','Pet: INT+9',}},
 		legs = Relic_Pitre.Legs_PMagic,
 		feet=Relic_Pitre.Feet_PMagic,
@@ -690,7 +702,7 @@ function init_gear_sets()
 	
 	sets.idle.Mpaca = set_combine(sets.engaged.Mpaca, {})
 	
-	sets.idle.Malignance = sets.engaged.Malignance
+	sets.idle.Malignance = sets.engaged.Malignance.Master
 	
     sets.idle.PetDA = sets.engaged.PetDA
 	
@@ -699,6 +711,11 @@ function init_gear_sets()
 	sets.idle.PetTP = sets.engaged.PetTP
 	
 	sets.idle.Rao  = sets.engaged.Rao
+	
+	sets.idle.PetMage = set_combine(sets.idle.Rao, {
+		legs = Relic_Pitre.Legs_PMagic,
+		waist = "Ukko Sash",
+	})
 
     -------------------------------------Enmity
     sets.pet = {} -- Not Used
@@ -721,7 +738,7 @@ function init_gear_sets()
 		hands="Mpaca's Gloves",
 		legs={ name="Herculean Trousers", augments={'Pet: Accuracy+22 Pet: Rng. Acc.+22','Pet: "Subtle Blow"+5','Pet: DEX+14','Pet: Attack+14 Pet: Rng.Atk.+14',}},
 		feet="Mpaca's Boots",
-		neck="Shulmanu Collar",
+		neck="Pup. Collar +2",
 		back=Visucius.TP,
 		ear1="Enmerkar Earring",
 		ear2="Kyrene's Earring",
