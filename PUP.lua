@@ -37,7 +37,7 @@ function user_setup()
         These are for when you are fighting with or without Pet
         When you are IDLE and Pet is ENGAGED that is handled by the Idle Sets
     ]]
-    state.OffenseMode:options("Mpaca", "PetEnmity", "Rao", "PetTP", "PetDA", "Malignance")
+    state.OffenseMode:options("Malignance", "Mpaca", "PetEnmity", "Rao", "PetTP", "PetDA")
 
     --[[
         Ctrl-F9 - Cycle Hybrid Mode (the defensive half of all 'hybrid' melee modes).
@@ -69,7 +69,7 @@ function user_setup()
         
         Will automatically set IdleMode to Idle when Pet becomes Engaged and you are Idle
     ]]
-    state.IdleMode:options("Mpaca", "Malignance", "PetTP", "PetEnmity", "Rao", "PetMage")
+    state.IdleMode:options("Malignance", "Mpaca", "PetTP", "PetEnmity", "Rao", "PetMage")
 
     --Various Cycles for the different types of PetModes
     state.PetStyleCycleTank = M {"NORMAL", "DD", "MAGIC", "SPAM"}
@@ -169,6 +169,7 @@ function user_setup()
     send_command("bind ^f8 gs c cycleback PetStyleCycle")
 	send_command('bind !f9 gs c cycleback OffenseMode')
 	send_command("bind !f10 gs c cycleback PhysicalDefenseMode")
+	send_command('bind !f12 gs c cycleback IdleMode')
     send_command("bind !e gs c toggle AutoMan")
     send_command("bind !d gs c toggle LockPetDT")
     send_command("bind !f6 gs c predict")
@@ -296,6 +297,11 @@ function init_gear_sets()
 	Visucius.WSDEX = {
 		name = "Visucius's Mantle",
         augments = {'DEX+20','Accuracy+20 Attack+20','DEX+10','"Dbl.Atk."+10'}
+	}
+	
+	Visucius.WSCRIT = {
+		name = "Visucius's Mantle",
+		augments={'STR+20','Accuracy+20 Attack+20','STR+10','Crit.hit rate+10',}
 	}
 	
 	Visucius.Tank = {
@@ -464,7 +470,7 @@ function init_gear_sets()
 		ring1="Niqmaddu Ring",
 		ring2="Gere Ring",
 		ear1="Schere Earring",
-		ear2="Cessance Earring",
+		ear2="Brutal Earring",
 		waist="Moonbow Belt +1",
 		back=Visucius.WSDEX
 	}
@@ -490,16 +496,20 @@ function init_gear_sets()
 		neck="Pup. Collar +2",
 		ring2="Niqmaddu Ring",
 		ring1="Gere Ring",
-		neck="Fotia Gorget",
 		ear1="Schere Earring",
-		ear2="Cessance Earring",
+		ear2="Brutal Earring",
 		waist="Moonbow Belt +1",
 		back=Visucius.WS
     }
 
     -- Specific weaponskill sets.  Uses the base set if an appropriate WSMod version isn't found
 
-    sets.precast.WS["Victory Smite"] = set_combine(sets.precast.WS, {})
+    sets.precast.WS["Victory Smite"] = set_combine(sets.precast.WS, {
+		head="Blistering Sallet +1",
+		hands="Ryuo Tekko +1",
+		legs="Heyoka Subligar +1",
+		back = Visucius.WSCRIT,
+	})
 	
 	sets.precast.WS["Stringing Pummel"] = set_combine(sets.precast.WS["Victory Smite"], {})
 
@@ -632,7 +642,8 @@ function init_gear_sets()
 	sets.engaged.Malignance.Master = set_combine(DT_GEAR, sets.master_accessories)
 	sets.engaged.Malignance.Pet = set_combine(DT_GEAR, set_combine(sets.pet_accessories, {
 		legs="Heyoka Subligar +1",
-		waist="Moonbow Belt +1"
+		waist="Moonbow Belt +1",
+		neck="Pup. Collar +2",
 	}))
 
     ----------------------------------------------------------------
@@ -665,7 +676,7 @@ function init_gear_sets()
 	    hands={ name="Herculean Gloves", augments={'Pet: "Mag.Atk.Bns."+30','"Store TP"+1','Pet: INT+9',}},
 		legs = Relic_Pitre.Legs_PMagic,
 		feet=Relic_Pitre.Feet_PMagic,
-	    neck="Adad Amulet",
+	    neck="Pup. Collar +2",
 	    waist="Ukko Sash",
 	    left_ear="Enmerkar Earring", 
 	    right_ear="Burana Earring",
