@@ -395,6 +395,7 @@ function init_gear_sets()
 		ring1="Petrov Ring",
 		ear1="Friomisi Earring",
 		ear2="Handler's Earring +1",
+		gloves="Kurys Gloves",
 	}
 
     -------------------------------------Fastcast
@@ -457,6 +458,10 @@ function init_gear_sets()
 
 	-- Mainly just enmity pieces
     sets.precast.JA["Provoke"] = sets.Enmity
+	
+	sets.precast.JA["Vallation"] = sets.Enmity
+	
+	sets.precast.JA["Pflug"] = sets.Enmity
 
     --Waltz set (chr and vit)
     sets.precast.Waltz = {
@@ -795,10 +800,7 @@ function init_gear_sets()
     sets.midcast.Pet.WS["MND"] = set_combine(sets.midcast.Pet.WSNoFTP, {})
 
     -- Armor Piercer, Armor Shatterer
-    sets.midcast.Pet.WS["DEX"] = set_combine(sets.midcast.Pet.WSFTP, {
-		ear2="Kyrene's Earring",
-		legs="Kara. Pantaloni +1",
-	})
+    sets.midcast.Pet.WS["DEX"] = set_combine(sets.midcast.Pet.WSNoFTP, {})
 
     -- Arcuballista, Daze
     sets.midcast.Pet.WS["DEXFTP"] =
