@@ -320,7 +320,7 @@ function init_gear_sets()
 		ring1="Cath Palug Ring",
 		ring2="Thurandaut Ring",
 		ear1="Enmerkar Earring",
-		ear2="Rimeice Earring",
+		ear2="Crep. Earring",
 		neck="Pup. Collar +2",
 		back=Visucius.TP,
 		waist="Klouskap Sash +1"
@@ -445,10 +445,8 @@ function init_gear_sets()
     sets.precast.JA["Maintenance"] = set_combine(sets.precast.JA["Repair"], {})
 
     sets.precast.JA.Maneuver = {
-        neck = "Buffoon's Collar +1",
         body = "Karagoz Farsetto +1",
         hands = Artifact_Foire.Hands_Mane_Overload,
-        back = "Visucius's Mantle",
         ear1 = "Burana Earring"
     }
 
@@ -474,8 +472,8 @@ function init_gear_sets()
 		neck="Pup. Collar +2",
 		ring1="Niqmaddu Ring",
 		ring2="Gere Ring",
-		ear1="Schere Earring",
-		ear2="Brutal Earring",
+		ear1="Crep. Earring",
+		ear2="Cessance Earring",
 		waist="Moonbow Belt +1",
 		back=Visucius.WSDEX
 	}
@@ -484,7 +482,7 @@ function init_gear_sets()
 		ring1="Cath Palug Ring",
 	   	ring2="Thurandaut Ring",
 		waist="Klouskap Sash +1",
-		ear1="Rimeice Earring",
+		ear1="Crep. Earring",
 		ear2="Enmerkar Earring",
 		back=Visucius.TP,
 	}
@@ -511,6 +509,7 @@ function init_gear_sets()
 
     sets.precast.WS["Victory Smite"] = set_combine(sets.precast.WS, {
 		head="Blistering Sallet +1",
+		ear2="Moonshade Earring",
 		hands="Ryuo Tekko +1",
 		legs="Heyoka Subligar +1",
 		back = Visucius.WSCRIT,
@@ -520,6 +519,7 @@ function init_gear_sets()
 
     sets.precast.WS["Shijin Spiral"] = set_combine(sets.precast.WS, {
 		body = "Tali'ah Manteel +2",
+		ear2="Mache Earring +1",
 		back = Visucius.WSDEX
 	})
 
@@ -623,7 +623,20 @@ function init_gear_sets()
     ]]
 	
 	sets.engaged.PetTP = PET_TP_GEAR
-	sets.engaged.PetTP.Master = set_combine(sets.engaged.PetTP, sets.master_accessories)
+	sets.engaged.PetTP.Master = {
+		head={name="Mpaca's Cap"},
+		legs="Heyoka Subligar +1",
+		body={name=Relic_Pitre.Body_PTP},
+		hands="Mpaca's Gloves",
+		feet="Mpaca's Boots",
+		neck="Pup. Collar +2",
+		ring1="Niqmaddu Ring",
+		ring2="Gere Ring",
+		ear1="Crep. Earring",
+		ear2="Brutal Earring",
+		waist="Moonbow Belt +1",
+		back=Visucius.TP
+	}
 	sets.engaged.PetTP.Pet = set_combine(sets.engaged.PetTP, sets.pet_accessories)
 	
 	
@@ -678,7 +691,7 @@ function init_gear_sets()
     sets.midcast.Pet["Elemental Magic"] = {
        	head={ name="Herculean Helm", augments={'Pet: "Mag.Atk.Bns."+30','Pet: "Regen"+3','Pet: INT+7',}},
 	    body={ name="Herculean Vest", augments={'Pet: "Mag.Atk.Bns."+30',}},
-	    hands={ name="Herculean Gloves", augments={'Pet: "Mag.Atk.Bns."+30','"Store TP"+1','Pet: INT+9',}},
+	    hands={ name="Herculean Gloves", augments={'Pet: "Mag.Atk.Bns."+15','"Store TP"+3','Pet: INT+10',}},
 		legs = Relic_Pitre.Legs_PMagic,
 		feet=Relic_Pitre.Feet_PMagic,
 	    neck="Pup. Collar +2",
