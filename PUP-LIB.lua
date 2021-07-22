@@ -5,12 +5,15 @@
 require('queues')
 res = require('resources')
 texts = require('texts')
+packets = require('packets')
 
 -------------------------------
 --------Global Variables-------
 -------------------------------
 
 local failedManeuvers = Q{}
+
+current_pet_tp = 0
 
 --Default States
 Master_State = "Idle"
@@ -764,7 +767,8 @@ function job_pet_status_change(new, old, eventArgs)
 			equip(sets.midcast.Pet["Elemental Magic"])
 			--eventArgs.handled = true
 		else 
-			handle_equipping_gear(player.status, Pet_State)
+			swap_pet_ws_gear()
+			--handle_equipping_gear(player.status, Pet_State)
 			--equip(sets.engaged[state.OffenseMode.current][state.HybridMode.current])
 		end
     else
@@ -841,6 +845,7 @@ end
 
 -- Toggles -- SE Macros: /console gs c "command"
 function job_self_command(command, eventArgs)
+	
     if command[1]:lower() == "automan" then --Toggles AutoMan
         state.AutoMan:toggle()
         validateTextInformation()
@@ -893,6 +898,14 @@ function job_self_command(command, eventArgs)
     elseif command[1]:lower() == "clear" then
         failedManeuvers:clear()
         msg('Maneuvers have been reset')
+	elseif command[1] == 'setWSFTP' then
+		equip(set_combine(sets.midcast.Pet.WSFTP))
+	elseif command[1] == 'setWSNONFTP' then
+		equip(set_combine(sets.midcast.Pet.WSNoFTP))
+	elseif command[1] == 'setBoneWS' then
+		equip(sets.DD.BONE)
+	elseif command[1] == 'resetGear' then
+		handle_equipping_gear(player.status, pet.status)
     end
 end
 
@@ -1033,72 +1046,20 @@ windower.register_event(
 
                 end
                 --Now we check if we need to lock our back for CP
-                if Master_State == const_stateEngaged and state.CP.value == true then 
-                    monsterToCheck = windower.ffxi.get_mob_by_target('t') 
-                    if monsterToCheck then -- Sanity Check 
+                --if Master_State == const_stateEngaged and state.CP.value == true then 
+                    --monsterToCheck = windower.ffxi.get_mob_by_target('t') 
+                    --if monsterToCheck then -- Sanity Check 
  
-                        if monsterToCheck.hpp < 25 then --Check mobs HP Percentage if below 25 then equip CP cape 
-                            equip({ back = CP_CAPE }) 
-                            disable("back") --Lock back till we disengage
-                        else 
-                            enable("back") --Else make sure the back is enabled
-                        end 
- 
-                    end 
-                end 
-
-                --We only want this to activate if we are actually running the timer for the pet weapon skill
-                if pet.tp ~= nil and state.PetModeCycle.value:lower() ~= "mage" and state.PetModeCycle.value:lower() ~= "tank" then
-                    if pet.tp >= 1000 and petWeaponSkillRecast <= 0 and startedPetWeaponSkillTimer == true and 
-						(state.PetStyleCycle.value:lower() ~= "spam" 
-	                     or state.PetStyleCycle.value:lower() == "dd" 
-	                     or state.PetModeCycle.value:lower() == "dd"
-						 or state.PetStyleCycle.value:lower() == "od"
-	                     or state.PetStyleCycle.value:lower() == "bone") 
-					then
-                        --We have passed the allowed time without the puppet using a weapon skill, locking till next round
-                        petWeaponSkillRecast = 0
-                        petWeaponSkillLock = true
-                        handle_equipping_gear(player.status, pet.status)
-                    elseif pet.tp < 1000 or Pet_State == "Idle" then
-                        resetWeaponSkillPetTimer()
-                    end
-                end
-
+                        --if monsterToCheck.hpp < 25 then --Check mobs HP Percentage if below 25 then equip CP cape 
+                           -- equip({ back = CP_CAPE }) 
+                            --disable("back") --Lock back till we disengage
+                        --else 
+                            --enable("back") --Else make sure the back is enabled
+                        --end 
+                    --end 
+                --end 
             end
             
-            --This reads if pet is active and
-            --pet style is SPAM or DD
-            --Otherwise this is handled for when the player is fighting with pet in job_aftercast
-            if
-                pet.isvalid and state.PetModeCycle.value:lower() ~= "mage" and state.PetModeCycle.value:lower() ~= "tank" and
-                    (state.PetStyleCycle.value:lower() ~= "spam" 
-                     or state.PetStyleCycle.value:lower() == "dd" 
-                     or state.PetModeCycle.value:lower() == "dd" 
-                     or state.PetStyleCycle.value:lower() == "bone")
-                    and (Master_State:lower() == "idle" or state.PetStyleCycle.value:lower() == "od")
-					and pet.status == 'Engaged'
-             then
-                --Now if pet has more than 1000 tp and pet is engaged and didn't just finish a weaponskill and we have not locked the pet out this set
-                if
-                    pet.tp >= 850 and justFinishedWeaponSkill == false and
-                        petWeaponSkillLock == false
-                 then
-
-					if pet.frame == "Valoredge Frame" and not state.SetFTP.value then
-						equip(sets.DD.BONE)
-					else
-						if state.SetFTP.value then
-	                        equip(set_combine(sets.midcast.Pet.WSFTP))
-	                    else
-	                        equip(set_combine(sets.midcast.Pet.WSNoFTP))
-	                    end
-					end
-
-                    startWeaponSkillPetTimer()
-                end
-            end
-
             if state.PetModeCycle.value == const_tank and Pet_State == const_stateEngaged and state.PetModeCycle.value:lower() == "tank" then
                 if buffactive["Fire Maneuver"] and (pet.attachments.strobe or pet.attachments["strobe II"]) then
                     if Strobe_Recast <= 2 then
@@ -1149,6 +1110,62 @@ function resetWeaponSkillPetTimer()
     petWeaponSkillLock = false
     startedPetWeaponSkillTimer = false
 end
+
+function swap_pet_ws_gear()
+	if current_pet_tp >= 1000 and (pet.isvalid and player.hpp > 0) then
+	    --Double check current Pet Status and Player Status
+	    --In some cases Mote's doesn't recognize a pet's status change
+	    Pet_State = pet.status
+	    Master_State = player.status
+		
+		if
+	        pet.isvalid and state.PetModeCycle.value:lower() ~= "mage" and state.PetModeCycle.value:lower() ~= "tank" and
+	            (state.PetStyleCycle.value:lower() ~= "spam" 
+	             or state.PetStyleCycle.value:lower() == "dd" 
+	             or state.PetModeCycle.value:lower() == "dd" 
+	             or state.PetStyleCycle.value:lower() == "bone")
+	            and (Master_State:lower() == "idle" or state.PetStyleCycle.value:lower() == "od")
+				and pet.status == 'Engaged'
+	 	then
+			if (Master_State:lower() == "idle" or state.PetStyleCycle.value:lower() == "od") then
+				
+				if pet.frame == "Valoredge Frame" and not state.SetFTP.value then
+					send_command('gs c setBoneWS')
+				else
+					if state.SetFTP.value then
+	                    send_command('gs c setWSFTP')
+	                else
+	                    send_command('gs c setWSNONFTP')
+	                end
+				end
+			end					
+		end
+		
+	else
+		--We have passed the allowed time without the puppet using a weapon skill, locking till next round
+	    petWeaponSkillRecast = 0
+	    petWeaponSkillLock = true
+	    send_command('gs c resetGear')
+	end
+end
+
+windower.raw_register_event('incoming chunk',function(id,original,modified,injected,blocked)
+	if not injected then
+		if (id == 0x67 or id == 0x068) then    -- general hp/tp/mp update
+		
+			local packet = packets.parse('incoming', original)
+			local msg_type = packet['Message Type']
+			
+			if (msg_type == 0x04) then
+				
+				-- Assign new TP globally
+				current_pet_tp = packet['Pet TP']
+				
+				swap_pet_ws_gear()
+			end
+		end
+	end
+end)
 
 windower.register_event(
     "incoming text",
@@ -1293,7 +1310,6 @@ function job_state_change(stateField, newValue, oldValue)
             main_text_hub.toggle_custom_gear_lock = const_off
             enable(customGearLock)
             handle_equipping_gear(player.status, Pet_State)
-			--equip(sets.engaged[state.OffenseMode.current][state.HybridMode.current])
         end
     elseif stateField == 'Auto Deploy' then --Updates HUB for Auto Deploy
         if newValue == true then
@@ -1344,9 +1360,7 @@ function display_current_job_state(eventArgs)
     end
 
     TotalSCalc()
-    determinePuppetType()
     handle_equipping_gear(player.status, Pet_State)
-	--equip(sets.engaged[state.OffenseMode.current][state.HybridMode.current])
 
     add_to_chat(122, msg)
 end
