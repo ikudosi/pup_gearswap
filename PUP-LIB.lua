@@ -12,8 +12,8 @@ packets = require('packets')
 -------------------------------
 
 local failedManeuvers = Q{}
-
-current_pet_tp = 0
+local current_pet_tp = 0
+local pet_is_nuking = false
 
 --Default States
 Master_State = "Idle"
@@ -635,6 +635,10 @@ end
 --Used to determine what Hybrid Mode to use when Player is engaged for trusts only and Pet is Engaged
 function user_customize_melee_set(meleeSet)
     
+	if pet_is_nuking then
+		return sets.midcast.Pet["Elemental Magic"]
+	end
+	
     if (Master_State:lower() == const_stateEngaged:lower()) and Pet_State:lower() == const_stateEngaged:lower() then
         if state.HybridMode.current == "Normal" then --If Hybrid Mode is Normal then simply return the set
             --meleeSet = sets.idle.Pet.Engaged
@@ -651,6 +655,11 @@ function user_customize_melee_set(meleeSet)
 end
 
 function job_pet_midcast(spell, action, spellMap, eventArgs)
+	
+	if spell.type == "BlackMagic" or spell.type == 'Elemental Magic' then
+		pet_is_nuking = true
+	end
+
 	if state.PetStyleCycleMage.value:lower() ~= 'mb' then
 		eventArgs.handled = true
 	end
@@ -666,16 +675,11 @@ function job_precast(spell, action, spellMap, eventArgs)
         equip(sets.precast.JA[spell.english])
     elseif sets.precast.WS[spell.english] then
         equip(sets.precast.WS[spell.english])
-    --elseif pet.isvalid then
-		--if spell.english == "Deploy" then
-			--if state.PetModeCycle.value:lower() ~= "mage" then
-				--if pet.tp >= 950 then
-		            --equip(sets.midcast.Pet.WSNoFTP)
-		            --eventArgs.handled = true
-				--end
-			--end
-        --end
     end
+	
+	if pet_is_nuking then
+		equip(sets.midcast.Pet["Elemental Magic"])
+	end
 end
 
 --Puppet Weaponskill Modifiers
@@ -719,8 +723,11 @@ function job_aftercast(spell, action, spellMap, eventArgs)
 			--equip(sets.engaged[state.OffenseMode.current][state.HybridMode.current])
         end
     else
-		handle_equipping_gear(player.status, Pet_State)
-		--equip(sets.engaged[state.OffenseMode.current][state.HybridMode.current])
+		if pet_is_nuking then
+			equip(sets.midcast.Pet["Elemental Magic"])
+		else
+			handle_equipping_gear(player.status, Pet_State)
+		end
     end
 end
 
@@ -752,7 +759,10 @@ function job_status_change(new, old)
         TotalSCalc()
     end
 
-    handle_equipping_gear(player.status, Pet_State)
+	if pet_is_nuking == false then
+		swap_pet_ws_gear()
+	end
+    --handle_equipping_gear(player.status, Pet_State)
 	--equip(sets.engaged[state.OffenseMode.current][state.HybridMode.current])
 end
 
@@ -763,13 +773,8 @@ function job_pet_status_change(new, old, eventArgs)
 		
 		-- If mage style is set to MB... I am probably trying to reserve pet to strictly do MB after engaging on SC.
 		-- This will prevent conflicts from job_pet_midcast?
-		if state.PetModeCycle.value:lower() == 'mage' and state.PetStyleCycleMage.value:lower() == 'mb' then
-			equip(sets.midcast.Pet["Elemental Magic"])
-			--eventArgs.handled = true
-		else 
+		if pet_is_nuking == false then
 			swap_pet_ws_gear()
-			--handle_equipping_gear(player.status, Pet_State)
-			--equip(sets.engaged[state.OffenseMode.current][state.HybridMode.current])
 		end
     else
         Pet_State = const_stateIdle
@@ -800,6 +805,10 @@ function job_pet_aftercast(spell)
     if table.contains(AutomatonWeaponSkills, spell.name) then
         justFinishedWeaponSkill = true
     end
+	
+	if spell.type == "BlackMagic" or spell.type == 'Elemental Magic' then
+		pet_is_nuking = false
+	end
 
     handle_equipping_gear(player.status, pet.status)
 	--equip(sets.engaged[state.OffenseMode.current][state.HybridMode.current])
@@ -1112,6 +1121,11 @@ function resetWeaponSkillPetTimer()
 end
 
 function swap_pet_ws_gear()
+
+	if pet_is_nuking then
+		return
+	end
+	
 	if current_pet_tp >= 1000 and (pet.isvalid and player.hpp > 0) then
 	    --Double check current Pet Status and Player Status
 	    --In some cases Mote's doesn't recognize a pet's status change
@@ -1202,8 +1216,7 @@ windower.register_event(
 --handle_update is always called when a job state is changed
 --Best to adjust gear in job_handle_update which is an override for the job file
 function job_state_change(stateField, newValue, oldValue)
-
-    --[[
+	    --[[
         stateField is the Mode that could be passed in that is changing
         This could include PhysicalDefenseMode, OffenseMode, PetModeCycle -- etc
         If you provide a description then that is what will be passed in
