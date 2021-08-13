@@ -612,6 +612,10 @@ function ternary(cond, T, F)
     end
 end
 
+function should_swap_to_mb_gear()
+	return pet_is_nuking and state.PetStyleCycleMage.value:lower() == 'mb'
+end
+
 ----------------------------------------------------
 ----------Windower Hooks/Custom Gearswap------------
 ----------------------------------------------------
@@ -635,7 +639,7 @@ end
 --Used to determine what Hybrid Mode to use when Player is engaged for trusts only and Pet is Engaged
 function user_customize_melee_set(meleeSet)
     
-	if pet_is_nuking then
+	if should_swap_to_mb_gear() then
 		return sets.midcast.Pet["Elemental Magic"]
 	end
 	
@@ -677,7 +681,7 @@ function job_precast(spell, action, spellMap, eventArgs)
         equip(sets.precast.WS[spell.english])
     end
 	
-	if pet_is_nuking then
+	if should_swap_to_mb_gear() then
 		equip(sets.midcast.Pet["Elemental Magic"])
 	end
 end
@@ -723,7 +727,7 @@ function job_aftercast(spell, action, spellMap, eventArgs)
 			--equip(sets.engaged[state.OffenseMode.current][state.HybridMode.current])
         end
     else
-		if pet_is_nuking then
+		if should_swap_to_mb_gear() then
 			equip(sets.midcast.Pet["Elemental Magic"])
 		else
 			handle_equipping_gear(player.status, Pet_State)
