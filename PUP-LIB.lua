@@ -676,7 +676,7 @@ function job_precast(spell, action, spellMap, eventArgs)
     elseif string.find(spell.english, "Maneuver") then
         equip(sets.precast.JA.Maneuver)
     elseif sets.precast.JA[spell.english] then
-        equip(sets.precast.JA[spell.english])
+		equip(sets.precast.JA[spell.english])
     elseif sets.precast.WS[spell.english] then
         equip(sets.precast.WS[spell.english])
     end
@@ -733,6 +733,10 @@ function job_aftercast(spell, action, spellMap, eventArgs)
 			handle_equipping_gear(player.status, Pet_State)
 		end
     end
+	
+	if spell.english == "Deploy" then
+		swap_pet_ws_gear()
+	end
 end
 
 --This watches for when the Player changes to idle/engaged/resting
@@ -775,11 +779,7 @@ function job_pet_status_change(new, old, eventArgs)
         Pet_State = const_stateEngaged
         TotalSCalc()
 		
-		-- If mage style is set to MB... I am probably trying to reserve pet to strictly do MB after engaging on SC.
-		-- This will prevent conflicts from job_pet_midcast?
-		if pet_is_nuking == false then
-			swap_pet_ws_gear()
-		end
+		swap_pet_ws_gear()
     else
         Pet_State = const_stateIdle
         TotalSCalc()
@@ -909,12 +909,14 @@ function job_self_command(command, eventArgs)
         state.CustomGearLock:toggle()
         validateTextInformation()
     elseif command[1]:lower() == "clear" then
+		pet_is_nuking = false
         failedManeuvers:clear()
-        msg('Maneuvers have been reset')
+		handle_equipping_gear(player.status, pet.status)
+		msg('Maneuvers have been reset')
 	elseif command[1] == 'setWSFTP' then
-		equip(set_combine(sets.midcast.Pet.WSFTP))
+		equip(sets.midcast.Pet.WSFTP)
 	elseif command[1] == 'setWSNONFTP' then
-		equip(set_combine(sets.midcast.Pet.WSNoFTP))
+		equip(sets.midcast.Pet.WSNoFTP)
 	elseif command[1] == 'setBoneWS' then
 		equip(sets.DD.BONE)
 	elseif command[1] == 'resetGear' then
@@ -1130,12 +1132,7 @@ function swap_pet_ws_gear()
 		return
 	end
 	
-	if current_pet_tp >= 1000 and (pet.isvalid and player.hpp > 0) then
-	    --Double check current Pet Status and Player Status
-	    --In some cases Mote's doesn't recognize a pet's status change
-	    Pet_State = pet.status
-	    Master_State = player.status
-		
+	if pet.status == 'Engaged' and current_pet_tp >= 1000 and (pet.isvalid and player.hpp > 0) then	
 		if
 	        pet.isvalid and state.PetModeCycle.value:lower() ~= "mage" and state.PetModeCycle.value:lower() ~= "tank" and
 	            (state.PetStyleCycle.value:lower() ~= "spam" 
@@ -1143,10 +1140,8 @@ function swap_pet_ws_gear()
 	             or state.PetModeCycle.value:lower() == "dd" 
 	             or state.PetStyleCycle.value:lower() == "bone")
 	            and (Master_State:lower() == "idle" or state.PetStyleCycle.value:lower() == "od")
-				and pet.status == 'Engaged'
 	 	then
 			if (Master_State:lower() == "idle" or state.PetStyleCycle.value:lower() == "od") then
-				
 				if pet.frame == "Valoredge Frame" and not state.SetFTP.value then
 					send_command('gs c setBoneWS')
 				else
