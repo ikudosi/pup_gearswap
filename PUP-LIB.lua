@@ -14,6 +14,7 @@ packets = require('packets')
 local failedManeuvers = Q{}
 local current_pet_tp = 0
 local pet_is_nuking = false
+local skillchain_active = false
 
 --Default States
 Master_State = "Idle"
@@ -613,7 +614,7 @@ function ternary(cond, T, F)
 end
 
 function should_swap_to_mb_gear()
-	return pet_is_nuking and state.PetStyleCycleMage.value:lower() == 'mb'
+	return pet_is_nuking and state.PetStyleCycleMage.value:lower() == 'mb' and skillchain_active
 end
 
 ----------------------------------------------------
@@ -640,7 +641,7 @@ end
 function user_customize_melee_set(meleeSet)
     
 	if should_swap_to_mb_gear() then
-		return sets.midcast.Pet["Elemental Magic"]
+		return sets.midcast.PetMagicBurst
 	end
 	
     if (Master_State:lower() == const_stateEngaged:lower()) and Pet_State:lower() == const_stateEngaged:lower() then
@@ -662,6 +663,10 @@ function job_pet_midcast(spell, action, spellMap, eventArgs)
 	
 	if spell.type == "BlackMagic" or spell.type == 'Elemental Magic' then
 		pet_is_nuking = true
+		
+		if should_swap_to_mb_gear() then
+			equip(sets.midcast.PetMagicBurst)
+		end
 	end
 
 	if state.PetStyleCycleMage.value:lower() ~= 'mb' then
@@ -680,10 +685,6 @@ function job_precast(spell, action, spellMap, eventArgs)
     elseif sets.precast.WS[spell.english] then
         equip(sets.precast.WS[spell.english])
     end
-	
-	if should_swap_to_mb_gear() then
-		equip(sets.midcast.Pet["Elemental Magic"])
-	end
 end
 
 --Puppet Weaponskill Modifiers
@@ -728,7 +729,7 @@ function job_aftercast(spell, action, spellMap, eventArgs)
         end
     else
 		if should_swap_to_mb_gear() then
-			equip(sets.midcast.Pet["Elemental Magic"])
+			equip(sets.midcast.PetMagicBurst)
 		else
 			handle_equipping_gear(player.status, Pet_State)
 		end
@@ -858,6 +859,13 @@ end
 
 -- Toggles -- SE Macros: /console gs c "command"
 function job_self_command(command, eventArgs)
+	
+	if command[1] == 'skillchain_on' then
+        skillchain_active = true
+        add_to_chat(158, '--- [GearSwap] Addon Opened Magic Burst Window! ---')
+    elseif command[1] == 'skillchain_off' then
+        skillchain_active = false
+    end
 	
     if command[1]:lower() == "automan" then --Toggles AutoMan
         state.AutoMan:toggle()
