@@ -69,7 +69,7 @@ function user_setup()
         
         Will automatically set IdleMode to Idle when Pet becomes Engaged and you are Idle
     ]]
-    state.IdleMode:options("Malignance", "Mpaca", "PetTP", "PetEnmity", "Rao", "PetMage")
+    state.IdleMode:options("Malignance", "Mpaca", "PetTP", "PetEnmity", "Rao", "PetMage", "Kiting")
 
     --Various Cycles for the different types of PetModes
     state.PetStyleCycleTank = M {"NORMAL", "DD", "MAGIC", "SPAM"}
@@ -152,17 +152,6 @@ function user_setup()
     state.CP = M(false, "CP") 
     CP_CAPE = "Aptitude Mantle +1" 
 
-    --[[
-        Enter the slots you would lock based on a custom set up.
-        Can be used in situation like Salvage where you don't want
-        certain pieces to change.
-
-        //gs c toggle customgearlock
-        ]]
-    state.CustomGearLock = M(false, "Custom Gear Lock")
-    --Example customGearLock = T{"head", "waist"}
-    customGearLock = T{}
-
     send_command("bind !f7 gs c cycle PetModeCycle")
     send_command("bind ^f7 gs c cycleback PetModeCycle")
     send_command("bind !f8 gs c cycle PetStyleCycle")
@@ -173,19 +162,17 @@ function user_setup()
     send_command("bind !e gs c toggle AutoMan")
     send_command("bind !d gs c toggle LockPetDT")
     send_command("bind !f6 gs c predict")
-    send_command("bind ^` gs c toggle LockWeapon")
     send_command("bind home gs c toggle setftp")
     send_command("bind PAGEUP gs c toggle autodeploy")
     send_command("bind PAGEDOWN gs c hide keybinds")
-    send_command("bind end gs c toggle CP") 
     send_command("bind = gs c clear")
 
     select_default_macro_book()
-	send_command('@wait 4;input /lockstyleset 4')
+	send_command('@wait 4;input /lockstyleset 1')
 
     -- Adjust the X (horizontal) and Y (vertical) position here to adjust the window
-    pos_x = 1400
-    pos_y = 100
+    pos_x = 2100
+    pos_y = 400
     setupTextWindow(pos_x, pos_y)
     
 end
@@ -267,9 +254,9 @@ function init_gear_sets()
     Relic_Pitre.Feet_PMagic = "Pitre Babouches +3" --Role Reversal
 
     Empy_Karagoz = {}
-    Empy_Karagoz.Head_PTPBonus = "Karagoz Capello +1"
-    Empy_Karagoz.Body_Overload = "Karagoz Farsetto"
-    Empy_Karagoz.Hands = "Karagoz Guanti"
+    Empy_Karagoz.Head_PTPBonus = "Karagoz Cappello +1"
+    Empy_Karagoz.Body_Overload = "Karagoz Farsetto +1"
+    Empy_Karagoz.Hands = "Karagoz Guanti +1"
     Empy_Karagoz.Legs_Combat = "Karagoz Pantaloni +1"
     Empy_Karagoz.Feet_Tatical = "Karagoz Scarpe +1"
 
@@ -313,14 +300,15 @@ function init_gear_sets()
 	
 	PET_TP_GEAR = {
 		head={name="Herculean Helm", augments={'Pet: "Store TP+10"'}},
-		legs={name="Herculean Trousers", augments={'Pet: "Store TP"+9'}},
+		--legs={name="Herculean Trousers", augments={'Pet: "Store TP"+9'}},
+		legs="Heyoka Subligar +1",
 		body={name=Relic_Pitre.Body_PTP},
 		hands={name="Herculean Gloves", augments={'Pet: "Store TP"+11'}},
-		feet={name="Herculean Boots", augments={'Pet: "Store TP"+10'}},
+		feet="Mpaca's Boots",
 		ring1="Cath Palug Ring",
 		ring2="Thurandaut Ring",
 		ear1="Enmerkar Earring",
-		ear2="Crep. Earring",
+		ear2="Crepuscular Earring",
 		neck="Pup. Collar +2",
 		back=Visucius.TP,
 		waist="Klouskap Sash +1"
@@ -472,7 +460,7 @@ function init_gear_sets()
 		neck="Pup. Collar +2",
 		ring1="Niqmaddu Ring",
 		ring2="Gere Ring",
-		ear1="Crep. Earring",
+		ear1="Crepuscular Earring",
 		ear2="Cessance Earring",
 		waist="Moonbow Belt +1",
 		back=Visucius.WSDEX
@@ -482,7 +470,7 @@ function init_gear_sets()
 		ring1="Cath Palug Ring",
 	   	ring2="Thurandaut Ring",
 		waist="Klouskap Sash +1",
-		ear1="Crep. Earring",
+		ear1="Crepuscular Earring",
 		ear2="Enmerkar Earring",
 		back=Visucius.TP,
 	}
@@ -508,6 +496,7 @@ function init_gear_sets()
     -- Specific weaponskill sets.  Uses the base set if an appropriate WSMod version isn't found
 
     sets.precast.WS["Victory Smite"] = set_combine(sets.precast.WS, {
+		neck="Fotia Gorget",
 		head="Blistering Sallet +1",
 		ear2="Moonshade Earring",
 		hands="Ryuo Tekko +1",
@@ -518,12 +507,10 @@ function init_gear_sets()
 	sets.precast.WS["Stringing Pummel"] = set_combine(sets.precast.WS["Victory Smite"], {})
 
     sets.precast.WS["Shijin Spiral"] = set_combine(sets.precast.WS, {
-		body = "Tali'ah Manteel +2",
-		ear2="Mache Earring +1",
 		back = Visucius.WSDEX
 	})
 
-    sets.precast.WS["Howling Fist"] = set_combine(sets.precast.WS["Victory Smite"], {})
+    sets.precast.WS["Howling Fist"] = set_combine(sets.precast.WS, {})
 	
 	sets.precast.WS["Raging Fists"] = set_combine(sets.precast.WS, {})
 	
@@ -534,7 +521,7 @@ function init_gear_sets()
 	})
 	
 	sets.precast.WS["Aeolian Edge"] = set_combine(sets.precast.WS, {
-		head="",
+		head=empty,
 		body="Cohort Cloak +1",
 		neck="Baetyl Pendant",
 		hands={name="Nyame Gauntlets"},
@@ -543,6 +530,7 @@ function init_gear_sets()
 		waist="Orpheus's Sash",
 		ear1="Friomisi Earring",
 		ear2="Moonshade Earring",
+		ring1="Arvina Ringlet +1",
 		back="Kaikias' Cape"
 	})
 
@@ -606,7 +594,7 @@ function init_gear_sets()
     ]]
 	
 	sets.engaged.Rao = set_combine(RAO_SET, {
-		ear1="Rimeice Earring",
+		ear1="Handler's Earring +1",
 		ear2="Enmerkar Earring",
 		ring1="C. Palug Ring",
 		ring2="Thurandaut Ring",
@@ -614,7 +602,13 @@ function init_gear_sets()
 	})
 	
     sets.engaged.Rao.Master = set_combine(sets.engaged.Rao, sets.master_accessories)
-	sets.engaged.Rao.Pet = set_combine(sets.engaged.Rao, sets.pet_accessories)
+	sets.engaged.Rao.Pet = set_combine(RAO_SET, set_combine(sets.pet_accessories, {
+		ear1="Handler's Earring +1",
+		ear2="Enmerkar Earring",
+		ring1="C. Palug Ring",
+		ring2="Thurandaut Ring",
+		back=Visucius.Tank
+	}))
 	
 	-------------------------------------
     --[[
@@ -632,7 +626,7 @@ function init_gear_sets()
 		neck="Pup. Collar +2",
 		ring1="Niqmaddu Ring",
 		ring2="Gere Ring",
-		ear1="Crep. Earring",
+		ear1="Crepuscular Earring",
 		ear2="Brutal Earring",
 		waist="Moonbow Belt +1",
 		back=Visucius.TP
@@ -688,9 +682,9 @@ function init_gear_sets()
        --legs="Kara. Pantaloni +1",
     }
 
-    sets.midcast.Pet["Elemental Magic"] = {
+    sets.midcast.PetMagicBurst = {
        	head={ name="Herculean Helm", augments={'Pet: "Mag.Atk.Bns."+30','Pet: "Regen"+3','Pet: INT+7',}},
-	    body={ name="Herculean Vest", augments={'Pet: "Mag.Atk.Bns."+30',}},
+	    body="Udug Jacket",
 	    hands={ name="Herculean Gloves", augments={'Pet: "Mag.Atk.Bns."+15','"Store TP"+3','Pet: INT+10',}},
 		legs = Relic_Pitre.Legs_PMagic,
 		feet=Relic_Pitre.Feet_PMagic,
@@ -699,17 +693,17 @@ function init_gear_sets()
 	    left_ear="Enmerkar Earring", 
 	    right_ear="Burana Earring",
 	    left_ring="C. Palug Ring",
-	    right_ring="Thurandaut Ring",
+	    right_ring="Defending Ring",
 	    back={ name="Visucius's Mantle", augments={'Pet: M.Acc.+20 Pet: M.Dmg.+20'}},
     }
+	
+	sets.midcast.Pet["Elemental Magic"] = {}
+	
+	sets.midcast.Pet["BlackMagic"] = {}
 
-    sets.midcast.Pet["Enfeebling Magic"] = {
-       -- Add your set here
-    }
+    sets.midcast.Pet["Enfeebling Magic"] = sets.midcast.PetMagicBurst
 
-    sets.midcast.Pet["Dark Magic"] = {
-       -- Add your set here
-    }
+    sets.midcast.Pet["Dark Magic"] = sets.midcast.PetMagicBurst
 
     sets.midcast.Pet["Divine Magic"] = {
        -- Add your set here 
@@ -741,10 +735,14 @@ function init_gear_sets()
 	
 	sets.idle.Rao  = sets.engaged.Rao
 	
-	sets.idle.PetMage = set_combine(sets.idle.Rao, {
+	sets.idle.PetMage = set_combine(sets.midcast.Pet["Elemental Magic"], {
 		legs = Relic_Pitre.Legs_PMagic,
 		waist = "Ukko Sash",
 	})
+	
+	sets.idle.Kiting = {
+		feet = "Hermes' Sandals"
+	}
 
     -------------------------------------Enmity
     sets.pet = {} -- Not Used
@@ -838,7 +836,7 @@ function init_gear_sets()
     ---------------------------------------------
     -- Town Set
     sets.idle.Town = {
-       -- Add your set here
+       feet = "Hermes' Sandals"
     }
 
     -- Resting sets
