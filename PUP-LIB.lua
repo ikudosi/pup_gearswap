@@ -103,7 +103,10 @@ keybinds_on['key_bind_physical'] = '(CTRL+F10)'
 keybinds_on['key_bind_hybrid'] = '(CTRL+F9)'
 keybinds_on['key_bind_auto_maneuver'] = '(ALT+E)'
 keybinds_on['key_bind_pet_dt'] = '(ALT+D)'
-keybinds_on['key_bind_lock_weapon'] = '(CTRL+Tilda)'
+keybinds_on['key_bind_toggle_weaponskill_ftp'] = '(HOME)'
+keybinds_on['key_bind_gearswap_clear'] = '(=)'
+keybinds_on['key_bind_toggle_auto_deploy'] = '(PAGE UP)'
+keybinds_on['key_bind_predict_automaton_setup'] = '(ALT+F6)'
 
 --[[
     This gets passed in when the Keybinds are turned off.
@@ -111,15 +114,18 @@ keybinds_on['key_bind_lock_weapon'] = '(CTRL+Tilda)'
     (Researching better way to handle this)
 ]]
 keybinds_off = {}
-keybinds_off['key_bind_pet_mode'] = ''
-keybinds_off['key_bind_pet_style'] = ''
-keybinds_off['key_bind_idle'] = ''
-keybinds_off['key_bind_offense'] = ''
-keybinds_off['key_bind_physical'] = ''
-keybinds_off['key_bind_hybrid'] = ''
-keybinds_off['key_bind_auto_maneuver'] = ''
-keybinds_off['key_bind_pet_dt'] = ''
-keybinds_off['key_bind_lock_weapon'] = ''
+keybinds_off['key_bind_pet_mode'] = keybinds_on['key_bind_pet_mode']
+keybinds_off['key_bind_pet_style'] = keybinds_on['key_bind_pet_style']
+keybinds_off['key_bind_idle'] = keybinds_on['key_bind_idle']
+keybinds_off['key_bind_offense'] = keybinds_on['key_bind_offense']
+keybinds_off['key_bind_physical'] = keybinds_on['key_bind_physical']
+keybinds_off['key_bind_hybrid'] = keybinds_on['key_bind_hybrid']
+keybinds_off['key_bind_auto_maneuver'] = keybinds_on['key_bind_auto_maneuver']
+keybinds_off['key_bind_pet_dt'] = keybinds_on['key_bind_pet_dt']
+keybinds_off['key_bind_toggle_weaponskill_ftp'] = keybinds_on['key_bind_toggle_weaponskill_ftp']
+keybinds_off['key_bind_gearswap_clear'] = keybinds_on['key_bind_gearswap_clear']
+keybinds_off['key_bind_toggle_auto_deploy'] = keybinds_on['key_bind_toggle_auto_deploy']
+keybinds_off['key_bind_predict_automaton_setup'] = keybinds_on['key_bind_predict_automaton_setup']
 
 --[[
     These below are used to fill in the different sections on the HUB window
@@ -135,7 +141,6 @@ keybinds_off['key_bind_lock_weapon'] = ''
 - \cs(0, 0, 125)HP :\cr ${pet_current_hp|0}/${pet_max_hp|0}
 - \cs(0, 125, 0)MP :\cr ${pet_current_mp|0}/${pet_max_mp|0}
 - \cs(255, 0, 0)TP :\cr ${pet_current_tp|0000|%04d} -- TP/S: ${pet_tp_per_second|0}
-- \cs(255, 0, 0)WS Gear Lock Timer:\cr ${ws_gear_lock_timer|0}
 ]]
 
     hub_pet_skills_std = [[ \cs(255, 115, 0)======= Pet Skills ========\cr
@@ -145,25 +150,25 @@ ${current_pet_skills|- No Skills To Track}
 ]]
 
     hub_state_std = [[ \cs(255, 115, 0)======= State ============\cr
--\cs(125, 125, 0)${key_bind_pet_mode} Pet Mode :\cr ${pet_current_mode|TANK}
--\cs(125, 125, 0)${key_bind_pet_style} Pet Style :\cr ${pet_current_style|NORMAL}
+-\cs(125, 125, 0) ${key_bind_pet_mode} Pet Mode :\cr ${pet_current_mode|TANK}
+-\cs(125, 125, 0) ${key_bind_pet_style} Pet Style :\cr ${pet_current_style|NORMAL}
 -\cs(125, 125, 0) Combined State :\cr ${player_pet_state|Idle}
 ]]
 
     hub_mode_std = [[ \cs(255, 115, 0)======= Mode ============\cr
--\cs(125, 125, 0)${key_bind_idle} Idle Mode :\cr ${player_current_idle|Idle}
--\cs(125, 125, 0)${key_bind_offense} Offense Mode :\cr ${player_current_offense|MasterPet}
--\cs(125, 125, 0)${key_bind_physical} Physical Mode :\cr ${player_current_physical|PetDT}
--\cs(125, 125, 0)${key_bind_hybrid} Hybrid Mode :\cr ${player_current_hybrid|Normal}
+-\cs(125, 125, 0) ${key_bind_idle} Idle Mode :\cr ${player_current_idle|Idle}
+-\cs(125, 125, 0) ${key_bind_offense} Offense Mode :\cr ${player_current_offense|MasterPet}
+-\cs(125, 125, 0) ${key_bind_physical} Physical Mode :\cr ${player_current_physical|PetDT}
+-\cs(125, 125, 0) ${key_bind_hybrid} Hybrid Mode :\cr ${player_current_hybrid|Normal}
 ]]
 
     hub_options_std = [[ \cs(255, 115, 0)======= Options ==========\cr
--\cs(125, 125, 0)${key_bind_auto_maneuver} Auto Maneuver :\cr ${toggle_auto_maneuver|OFF}
--\cs(125, 125, 0)${key_bind_pet_dt} Lock Pet DT Set :\cr ${toggle_lock_pet_dt_set|OFF}
--\cs(125, 125, 0)${key_bind_lock_weapon} Lock Weapon :\cr ${toggle_lock_weapon|OFF}
--\cs(125, 125, 0) Weaponskill FTP :\cr ${toggle_weaponskill_ftp|OFF}
--\cs(125, 125, 0) Custom Gear Lock :\cr ${toggle_custom_gear_lock|OFF}
--\cs(125, 125, 0) Auto Deploy :\cr ${toggle_auto_deploy|OFF}
+-\cs(125, 125, 0) ${key_bind_auto_maneuver} Auto Maneuver :\cr ${toggle_auto_maneuver|OFF}
+-\cs(125, 125, 0) ${key_bind_pet_dt} Lock Set :\cr ${toggle_lock_pet_dt_set|OFF}
+-\cs(125, 125, 0) ${key_bind_toggle_weaponskill_ftp} Weaponskill FTP :\cr ${toggle_weaponskill_ftp|OFF}
+-\cs(125, 125, 0) ${key_bind_toggle_auto_deploy} Auto Deploy :\cr ${toggle_auto_deploy|OFF}
+-\cs(125, 125, 0) ${key_bind_predict_automaton_setup} Predict Automaton Setup}
+-\cs(125, 125, 0) ${key_bind_gearswap_clear} GS Clear Gearswap}
 ]]
 
 --[[
@@ -171,7 +176,7 @@ ${current_pet_skills|- No Skills To Track}
     _lte stands for Lite version
 ]]
     hub_pet_info_lte = [[ 
-\cs(255, 115, 0)= Pet Info: \cr- \cs(0, 0, 125)HP :\cr ${pet_current_hp|0}/${pet_max_hp|0}- \cs(0, 125, 0)MP :\cr ${pet_current_mp|0}/${pet_max_mp|0}- \cs(255, 0, 0)TP :\cr ${pet_current_tp|0000|%04d} -- TP/S: ${pet_tp_per_second|0}- \cs(255, 0, 0)WSG Lock:\cr ${ws_gear_lock_timer|0} 
+\cs(255, 115, 0)= Pet Info: \cr- \cs(0, 0, 125)HP :\cr ${pet_current_hp|0}/${pet_max_hp|0}- \cs(0, 125, 0)MP :\cr ${pet_current_mp|0}/${pet_max_mp|0}- \cs(255, 0, 0)TP :\cr ${pet_current_tp|0000|%04d} -- TP/S: ${pet_tp_per_second|0}- \cs(255, 0, 0)} 
 ]]
 
     hub_pet_skills_lte = ''
@@ -240,12 +245,6 @@ function validateTextInformation()
         main_text_hub.toggle_weaponskill_ftp = const_on
     else
         main_text_hub.toggle_weaponskill_ftp = const_off
-    end
-
-    if state.CustomGearLock.value then
-        main_text_hub.toggle_custom_gear_lock =  const_on
-    else
-        main_text_hub.toggle_custom_gear_lock =  const_off
     end
 
     if state.AutoDeploy.value then
@@ -429,7 +428,7 @@ function updatePetSkills()
     end
 
     if not pet.attachments.strobe and not pet.attachments["strobe II"] and not pet.attachments.flashbulb then
-        pet_skills = pet_skills .. "\\cs(125, 125, 125)-No Skills To Track\\cr \n"
+        pet_skills = pet_skills .. "\\cs(125, 125, 125)- No Skills To Track\\cr \n"
     end
 
     --Set the Pet Skills section within the HUB
@@ -659,6 +658,16 @@ function user_customize_melee_set(meleeSet)
     end
 end
 
+function job_pet_precast(spell, action, spellMap, eventArgs)
+	if spell.type == "BlackMagic" or spell.type == 'Elemental Magic' then
+		pet_is_nuking = true
+		
+		if should_swap_to_mb_gear() then
+			equip(sets.midcast.PetMagicBurst)
+		end
+	end
+end
+
 function job_pet_midcast(spell, action, spellMap, eventArgs)
 	
 	if spell.type == "BlackMagic" or spell.type == 'Elemental Magic' then
@@ -718,10 +727,6 @@ function job_aftercast(spell, action, spellMap, eventArgs)
                 equip(sets.midcast.Pet.WSNoFTP)
             end
 
-            --Since this will be a new Weapon Skill we just performed best to reset any current timers
-            resetWeaponSkillPetTimer()
-            --Begin the count down until we may lock out the pet weapon skill set
-            startWeaponSkillPetTimer()
             eventArgs.handled = true
         else
 			handle_equipping_gear(player.status, Pet_State)
@@ -862,7 +867,6 @@ function job_self_command(command, eventArgs)
 	
 	if command[1] == 'skillchain_on' then
         skillchain_active = true
-        add_to_chat(158, '--- [GearSwap] Addon Opened Magic Burst Window! ---')
     elseif command[1] == 'skillchain_off' then
         skillchain_active = false
     end
@@ -1105,34 +1109,12 @@ windower.register_event(
                 Flashbulb_Recast = Flashbulb_Timer - (os.time() - Flashbulb_Time)
             end
 
-            if petWeaponSkillRecast > 0 and startedPetWeaponSkillTimer == true then
-                --Count down the timer if it has started
-                petWeaponSkillRecast = DefaultPetWeaponSkillLockOutTimer - (os.time() - petWeaponSkillTime)
-                main_text_hub.ws_gear_lock_timer = petWeaponSkillRecast
-            end
-
             updatePetSkills()
             validateTextInformation()
             
         end
     end
 )
-
-function startWeaponSkillPetTimer()
-    if petWeaponSkillRecast <= 0 and startedPetWeaponSkillTimer == false then
-        petWeaponSkillRecast = DefaultPetWeaponSkillLockOutTimer
-        petWeaponSkillTime = os.time()
-        startedPetWeaponSkillTimer = true
-    end
-end
-
-function resetWeaponSkillPetTimer()
-    petWeaponSkillRecast = 0
-    main_text_hub.ws_gear_lock_timer = petWeaponSkillRecast
-    justFinishedWeaponSkill = false
-    petWeaponSkillLock = false
-    startedPetWeaponSkillTimer = false
-end
 
 function swap_pet_ws_gear()
 
