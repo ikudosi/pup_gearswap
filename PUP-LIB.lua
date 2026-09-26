@@ -12,6 +12,8 @@ packets = require('packets')
 -------------------------------
 
 local failedManeuvers = Q{}
+local pendingManeuvers = Q{}
+local current_pet_tp = 0
 local current_pet_tp = 0
 local pet_is_nuking = false
 local skillchain_active = false
@@ -581,6 +583,7 @@ end
 
 function reset_timers()
     failedManeuvers:clear()
+	pendingManeuvers:clear()
     currentManeuvers:clear()
 
     if areas.Cities:contains(world.area) then
@@ -711,9 +714,20 @@ Modifier["Knockout"] = "AGI"
 function job_aftercast(spell, action, spellMap, eventArgs)
 
     --Maneuver was interrupted and we don't have up to 3 already in queue then add this to be retried
-    if string.find(spell.english, "Maneuver") and spell.interrupted == true and failedManeuvers:length() <= 3 then
-        failedManeuvers:push(spell)
-    end
+    if string.find(spell.english, "Maneuver") and spell.interrupted == true and failedManeuvers:length() < 3 then
+		local alreadyPending = false
+
+		for i = 1, pendingManeuvers:length() do
+			if pendingManeuvers[i] == spell.english then
+				alreadyPending = true
+				break 
+			end
+		end
+
+		if not alreadyPending then
+			failedManeuvers:push(spell)
+		end
+	end
 	
     if pet.isvalid and ((state.PetModeCycle.value ~= 'MAGE' and state.PetModeCycle.value ~= "TANK") and  state.PetStyleCycleDD.value ~= 'SPAM') then
         if SC[pet.frame][spell.english] and pet.tp >= 850 and Pet_State == "Engaged" then
@@ -839,27 +853,46 @@ function job_buff_change(status, gain, eventArgs)
     end
 
     if status:contains("Maneuver") and gain == false then
-        currentManeuvers:pop()
-    end
-    
-    if status:contains("Maneuver") and gain then
-        currentManeuvers:push(status)
-    end
+    -- Remove the exact maneuver that expired.
+		for i = 1, currentManeuvers:length() do
+			if currentManeuvers[i] == status then
+				currentManeuvers:remove(i)
+				break
+			end
+		end
 
-    if 
-        status:contains("Maneuver") 
-        and gain == false
-        and state.AutoMan.value 
-        and player.hp > 0 
-        and pet.isvalid 
-        and not areas.Cities:contains(world.area)
-        and currentManeuvers:length() < 3
-        then
-       
-        send_command('input /ja "' .. status .. '" <me>')
-            
-    end
+		-- Remember exactly which maneuver expired.
+		if state.AutoMan.value
+			and player.hp > 0
+			and pet.isvalid
+			and not areas.Cities:contains(world.area)
+		then
+			pendingManeuvers:push(status)
+		end
+	end
 
+	if status:contains("Maneuver") and gain then
+		-- Only add the maneuver once it actually exists.
+		if currentManeuvers:length() < 3 then
+			currentManeuvers:push(status)
+		end
+
+        -- Remove one matching pending maneuver, if this gain came from one.
+        for i = 1, pendingManeuvers:length() do
+            if pendingManeuvers[i] == status then
+                pendingManeuvers:remove(i)
+                break
+            end
+        end
+
+        -- A successful application also satisfies one previously failed attempt.
+        for i = 1, failedManeuvers:length() do
+            if failedManeuvers[i].english == status then
+                failedManeuvers:remove(i)
+                break
+            end
+        end
+	end
 end
 
 -- Toggles -- SE Macros: /console gs c "command"
@@ -1036,16 +1069,31 @@ windower.register_event(
 
             calculatePetTpPerSec()
 
-            --As long as we are no doing an action and a maneuver that failed has been queued
-            if not midaction() and failedManeuvers:length() > 0 then
-                local ability = failedManeuvers:pop()
+            -- Retry maneuver applications. Only issue one maneuver command per tick.
+            if not midaction() then
+                -- Expired maneuvers have priority. Remove the pending entry when the
+                -- actual attempt is made; if it is interrupted, job_aftercast()
+                -- will place it into failedManeuvers.
+                if pendingManeuvers:length() > 0 then
+                    local maneuver = pendingManeuvers[1]
 
-                --check recast timer to make sure we can actually use ability
-                if windower.ffxi.get_ability_recasts()[res.job_abilities[ability.id].recast_id] <= 0 then
-                    send_command('wait 0.5;input /ja "' .. ability.name .. '" <me>')
-                else
-                    --if we cant recast then push it back on to try again
-                    failedManeuvers:push(ability)
+                    if currentManeuvers:length() < 3 then
+                        pendingManeuvers:remove(1)
+                        send_command('input /ja "' .. maneuver .. '" <me>')
+                    end
+
+                -- Only retry an interrupted maneuver when there is no pending
+                -- replacement waiting to be applied.
+                elseif failedManeuvers:length() > 0 and currentManeuvers:length() < 3 then
+                    local ability = failedManeuvers:pop()
+
+                    --check recast timer to make sure we can actually use ability
+                    if windower.ffxi.get_ability_recasts()[res.job_abilities[ability.id].recast_id] <= 0 then
+                        send_command('wait 0.5;input /ja "' .. ability.name .. '" <me>')
+                    else
+                        --if we cant recast then push it back on to try again
+                        failedManeuvers:push(ability)
+                    end
                 end
             end
 
@@ -1068,7 +1116,7 @@ windower.register_event(
                     --If the monster ID's are not equal then we changed monsters
                     if previousTargetedMonster ~= currentTargetedMonster then
                         msg('Auto Deploying Pet')
-                        send_command('wait 1;input /pet "Deploy" <t>')
+                        send_command('wait 2;input /pet "Deploy" <t>')
                     end
 
                 end
