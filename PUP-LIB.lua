@@ -18,6 +18,9 @@ local current_pet_tp = 0
 local pet_is_nuking = false
 local skillchain_active = false
 
+-- Populated by get_ws_buff_profile() in WS-BuffHelpers.lua
+local ws_buff_profile = {}
+
 --Default States
 Master_State = "Idle"
 Pet_State = "Idle"
@@ -699,6 +702,10 @@ function job_precast(spell, action, spellMap, eventArgs)
     end
 end
 
+function job_post_precast(spell, action, spellMap, eventArgs)
+	apply_ws_buff_set(spell)
+end
+
 --Puppet Weaponskill Modifiers
 Modifier = {}
 
@@ -845,6 +852,8 @@ end
 currentManeuvers = Q{}
 
 function job_buff_change(status, gain, eventArgs)
+
+	ws_buff_profile = get_ws_buff_profile()
     
     if status == "sleep" and gain then
         equip(set_combine(sets.defense.PDT, {neck = "Opo-opo Necklace"}))

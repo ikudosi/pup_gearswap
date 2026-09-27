@@ -196,6 +196,7 @@ end
 
 function job_setup()
     include("PUP-LIB.lua")
+	include("WS-BuffHelpers.lua")
 end
 
 function init_gear_sets()
@@ -484,11 +485,11 @@ function init_gear_sets()
 		hands="Mpaca's Gloves",
 		legs="Mpaca's Hose",
 		feet="Mpaca's Boots",
-		neck="Pup. Collar +2",
+		neck="Fotia Gorget",
 		ring2="Niqmaddu Ring",
 		ring1="Gere Ring",
 		ear1="Schere Earring",
-		ear2="Brutal Earring",
+		ear2="Moonshade Earring",
 		waist="Moonbow Belt +1",
 		back=Visucius.WS
     }
@@ -496,21 +497,31 @@ function init_gear_sets()
     -- Specific weaponskill sets.  Uses the base set if an appropriate WSMod version isn't found
 
     sets.precast.WS["Victory Smite"] = set_combine(sets.precast.WS, {
-		neck="Fotia Gorget",
-		head="Blistering Sallet +1",
-		ear2="Moonshade Earring",
-		hands="Ryuo Tekko +1",
-		legs="Heyoka Subligar +1",
 		back = Visucius.WSCRIT,
 	})
+	sets.precast.WS["Victory Smite"].High = set_combine(sets.precast.WS["Victory Smite"], {
+		hands="Ryuo Tekko +1",
+		neck="Pup. Collar +2",
+		back = Visucius.WS,
+	})
 	
-	sets.precast.WS["Stringing Pummel"] = set_combine(sets.precast.WS["Victory Smite"], {})
+	sets.precast.WS["Stringing Pummel"] = set_combine(sets.precast.WS["Victory Smite"], {})	
+	sets.precast.WS["Stringing Pummel"].High = set_combine(sets.precast.WS["Stringing Pummel"], {
+		neck="Pup. Collar +2",
+	})
 
     sets.precast.WS["Shijin Spiral"] = set_combine(sets.precast.WS, {
 		back = Visucius.WSDEX
 	})
+	sets.precast.WS["Shijin Spiral"].High = set_combine(sets.precast.WS["Shijin Spiral"], {
+		neck="Pup. Collar +2",
+		back = Visucius.WSDEX
+	})
 
     sets.precast.WS["Howling Fist"] = set_combine(sets.precast.WS, {})
+	sets.precast.WS["Howling Fist"].High = set_combine(sets.precast.WS["Howling Fist"], {
+		neck="Pup. Collar +2",
+	})
 	
 	sets.precast.WS["Raging Fists"] = set_combine(sets.precast.WS, {})
 	
