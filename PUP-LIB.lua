@@ -17,7 +17,6 @@ include("WS-BuffHelpers.lua")
 local desiredManeuvers = {}
 local pendingManeuvers = {}
 local maneuverProfileInitialized = false
-local current_pet_tp = 0
 local pet_is_nuking = false
 local skillchain_active = false
 
@@ -145,10 +144,7 @@ keybinds_off['key_bind_predict_automaton_setup'] = keybinds_on['key_bind_predict
     
     _std stands for standard version
 ]]
-    hub_pet_info_std = [[ \cs(255, 115, 0)======= Pet Info ==========\cr
-- \cs(0, 0, 125)HP :\cr ${pet_current_hp|0}/${pet_max_hp|0}
-- \cs(0, 125, 0)MP :\cr ${pet_current_mp|0}/${pet_max_mp|0}
-- \cs(255, 0, 0)TP :\cr ${pet_current_tp|0000|%04d}
+    hub_pet_info_std = [[ \cs(255, 115, 0)======= Info ==========\cr
 - \cs(125, 125, 0)WS Buff Eff. :\cr ${ws_buff_level}
 ]]
 
@@ -185,7 +181,7 @@ ${current_pet_skills|- No Skills To Track}
     _lte stands for Lite version
 ]]
     hub_pet_info_lte = [[ 
-\cs(255, 115, 0)= Pet Info: \cr- \cs(0, 0, 125)HP :\cr ${pet_current_hp|0}/${pet_max_hp|0}- \cs(0, 125, 0)MP :\cr ${pet_current_mp|0}/${pet_max_mp|0}- \cs(255, 0, 0)TP :\cr ${pet_current_tp|0000|%04d}- \cs(255, 0, 0)} 
+\cs(255, 115, 0)= Pet Info: \cr- \cs(125, 125, 0)WS Buff Eff. :\cr ${ws_buff_level} 
 ]]
 
     hub_pet_skills_lte = ''
@@ -216,7 +212,6 @@ function validateTextInformation()
 
     -- Updates Pet Info and Pet Skills
     if pet.isvalid then
-        updatePetStats()
         updatePetSkills()
     end
 
@@ -1119,37 +1114,9 @@ autoDeployPending = false
 autoDeployRetryTime = 0
 autoDeployRetryCount = 0
 
---List used to track the pet TP
-track_pet_tp = L{}
---How many we want to save when figuring out TP/S
-max_pet_tp_to_track = 10
---Keeping track of previous TP passed in
-previous_pet_tp = 0
-
---Handles updating the Pet Stats for HP/MP/TP
-function updatePetStats()
-
-    --As long as we have a pet and player is not dead lets update
-    if pet.isvalid and player.hpp > 0 then
-        
-        main_text_hub.pet_current_hp = tostring(pet.hp)
-        main_text_hub.pet_current_mp = tostring(pet.mp)
-        main_text_hub.pet_max_hp = tostring(pet.max_hp)
-        main_text_hub.pet_max_mp = tostring(pet.max_mp)
-
-        current_pet_tp = pet.tp
-        if current_pet_tp ~= nil then
-            main_text_hub.pet_current_tp = current_pet_tp
-        end
-    end
-
-end
-
 windower.register_event(
     "prerender",
     function()
-
-        updatePetStats()
 
         --Items we want to check every second
         if os.time() > time_start then
@@ -1263,7 +1230,7 @@ function swap_pet_ws_gear()
 		return
 	end
 	
-	if pet.status == 'Engaged' and current_pet_tp >= 1000 and (pet.isvalid and player.hpp > 0) then	
+	if pet.status == 'Engaged' and pet.tp >= 1000 and (pet.isvalid and player.hpp > 0) then	
 		if
 	        pet.isvalid and state.PetModeCycle.value:lower() ~= "mage" and state.PetModeCycle.value:lower() ~= "tank" and
 	            (state.PetStyleCycle.value:lower() ~= "spam" 
@@ -1292,24 +1259,6 @@ function swap_pet_ws_gear()
 	    send_command('gs c resetGear')
 	end
 end
-
-windower.raw_register_event('incoming chunk',function(id,original,modified,injected,blocked)
-	if not injected then
-		if (id == 0x67 or id == 0x068) then    -- general hp/tp/mp update
-		
-			local packet = packets.parse('incoming', original)
-			local msg_type = packet['Message Type']
-			
-			if (msg_type == 0x04) then
-				
-				-- Assign new TP globally
-				current_pet_tp = packet['Pet TP']
-				
-				swap_pet_ws_gear()
-			end
-		end
-	end
-end)
 
 windower.register_event(
     "incoming text",
