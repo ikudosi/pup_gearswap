@@ -629,16 +629,22 @@ end
 
 --Used to determine what Hybrid Mode to use when Player Idle and Pet is Engaged
 function user_customize_idle_set(idleSet)
-    
-    if Master_State:lower() == const_stateIdle:lower() and Pet_State:lower() == const_stateEngaged:lower() then
-        if state.HybridMode.current == "Normal" then --If Hybrid Mode is Normal then simply return the set
+
+    -- Never replace the Town idle set.
+    if areas.Cities:contains(world.area) then
+        return idleSet
+    end
+
+    if Master_State:lower() == const_stateIdle:lower()
+        and Pet_State:lower() == const_stateEngaged:lower() then
+
+        if state.HybridMode.current == "Normal" then
             return idleSet
         else
-            --idleSet = sets.idle.Pet.Engaged[state.HybridMode.current] --When Pet is engaged we pass in the Hybrid Mode to match to an existing set
-			idleSet = sets.engaged[state.OffenseMode.current][state.HybridMode.current]
+            idleSet = sets.engaged[state.OffenseMode.current][state.HybridMode.current]
             return idleSet
         end
-    else --Otherwise return the idleSet with no changes from us
+    else
         return idleSet
     end
 end
