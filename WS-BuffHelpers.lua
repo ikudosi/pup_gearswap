@@ -1,4 +1,4 @@
---============================================================
+
 -- WS_BUFF_HELPER.lua
 --
 -- Determines the player's general offensive buff environment
@@ -33,6 +33,170 @@ end
 
 
 --------------------------------------------------------------
+-- Target-side offensive state
+--------------------------------------------------------------
+--
+-- Monster abilities are not player buffs, so they cannot be read
+-- from buffactive.  We watch incoming action packets instead.
+--
+-- Only target-side effects that improve our physical WS damage
+-- are tracked here.  A monster's Attack increase, for example,
+-- does not belong in this calculation because it does not make
+-- our WS hit harder.
+--
+-- Berserk is especially relevant because it lowers the monster's
+-- Defense by 25%.  This makes the monster easier to damage.
+--
+-- The score below is a HEURISTIC conversion into this helper's
+-- existing Low/Mid/High scale.  It is NOT "Attack +4" and it is
+-- not intended to reproduce the pDIF formula.
+--============================================================
+
+local ws_target_state = {
+    id = nil,
+    effects = {},
+}
+
+local target_effects = {
+    -- These monster abilities grant the Berserk status/effect.
+    -- Berserk is +25% Attack / -25% Defense, so from OUR
+    -- perspective the important part is the target's Defense loss.
+    --
+    -- The defense_score is intentionally a heuristic bridge to
+    -- this helper's existing Low/Mid/High system.
+    -- defense_reduction is the actual documented effect and is
+    -- exposed in the tracked state for debugging/future logic.
+    ['Berserk'] = {
+        defense_reduction = 0.25,
+        defense_score = 2,
+        duration = 180,
+    },
+
+    -- Rams and Sheep use Rage; Rage gives the Berserk effect.
+    ['Rage'] = {
+        defense_reduction = 0.25,
+        defense_score = 2,
+        duration = 180,
+    },
+
+    -- Wivre use Boiling Blood. It grants Haste + Berserk, and
+    -- the Berserk portion lowers the Wivre's Defense.
+    ['Boiling Blood'] = {
+        defense_reduction = 0.25,
+        defense_score = 2,
+        duration = 180,
+    },
+}
+
+local function clear_ws_target_state()
+    ws_target_state.id = nil
+    ws_target_state.effects = {}
+end
+
+
+local function refresh_ws_target()
+
+    local target = windower.ffxi.get_mob_by_target('t')
+
+    if not target then
+        clear_ws_target_state()
+        return
+    end
+
+    if ws_target_state.id ~= target.id then
+        ws_target_state.id = target.id
+        ws_target_state.effects = {}
+    end
+
+    local now = os.time()
+
+    for name, effect in pairs(ws_target_state.effects) do
+        if effect.expires_at and effect.expires_at <= now then
+            ws_target_state.effects[name] = nil
+        end
+    end
+end
+
+
+local function get_monster_ability_from_action(act)
+
+    if not act or not act.targets or not act.targets[1] then
+        return nil
+    end
+
+    if not act.targets[1].actions or not act.targets[1].actions[1] then
+        return nil
+    end
+
+    local ability_id = act.targets[1].actions[1].param
+
+    if not ability_id then
+        return nil
+    end
+
+    return res.monster_abilities[ability_id]
+end
+
+
+local function track_target_ability(act)
+
+    if not act or not act.actor_id then
+        return
+    end
+
+    -- We only care about abilities used by our current target.
+    local target = windower.ffxi.get_mob_by_target('t')
+
+    if not target or target.id ~= act.actor_id then
+        return
+    end
+
+    local ability = get_monster_ability_from_action(act)
+
+    if not ability or not ability.english then
+        return
+    end
+
+    local effect = target_effects[ability.english]
+
+    if not effect then
+        return
+    end
+
+    ws_target_state.id = target.id
+    ws_target_state.effects[ability.english] = {
+        expires_at = os.time() + effect.duration,
+        defense_score = effect.defense_score,
+        defense_reduction = effect.defense_reduction,
+    }
+end
+
+
+-- Register this once because the helper can be included by more
+-- than one GearSwap file/library.
+if not _WS_BUFF_HELPER_ACTION_REGISTERED then
+
+    _WS_BUFF_HELPER_ACTION_REGISTERED = true
+
+    windower.register_event('action', track_target_ability)
+end
+
+
+local function get_target_defense_score()
+
+    refresh_ws_target()
+
+    local score = 0
+
+    for _, effect in pairs(ws_target_state.effects) do
+        score = score + (effect.defense_score or 0)
+    end
+
+    return score
+end
+
+
+--------------------------------------------------------------
 -- Main function
 --------------------------------------------------------------
 
@@ -49,6 +213,15 @@ function get_ws_buff_profile()
         -- It represents confidence that we're in a strongly
         -- attack-buffed environment.
         attack_score = 0,
+
+        -- Target-side Defense reductions that improve our WS
+        -- damage.  This is kept separate from player Attack.
+        target_defense_score = 0,
+        target_berserk = false,
+
+        -- Combined environment score used only for the final
+        -- Low/Mid/High classification.
+        effective_attack_score = 0,
 
         -- Other WS-relevant categories are deliberately kept
         -- separate because they do NOT indicate attack cap.
@@ -386,29 +559,64 @@ function get_ws_buff_profile()
 
 
     --========================================================
+    --========================================================
+    -- TARGET-SIDE EFFECTS
+    --========================================================
+    --
+    -- Enemy Defense reductions are offensive conditions for our
+    -- WS, but they are deliberately kept separate from the
+    -- player's Attack buffs.
+    --
+    -- Example:
+    --
+    --      Player buffs:      attack_score = 4
+    --      Target Berserk:    target_defense_score = 2
+    --      Effective score:   6
+    --
+    -- This does NOT mean we have "Attack +6".  It is simply a
+    -- common scale for deciding which WS set to use.
+    --========================================================
+
+    p.target_defense_score = get_target_defense_score()
+
+    p.target_berserk =
+        ws_target_state.effects['Berserk'] ~= nil or
+        ws_target_state.effects['Rage'] ~= nil or
+        ws_target_state.effects['Boiling Blood'] ~= nil
+
+    -- True when any tracked target effect is currently reducing
+    -- the monster's Defense. This is useful for debugging and
+    -- for WS-specific logic later.
+    p.target_defense_reduction = 0
+
+    for _, effect in pairs(ws_target_state.effects) do
+        p.target_defense_reduction =
+            math.max(p.target_defense_reduction, effect.defense_reduction or 0)
+    end
+
+    p.effective_attack_score =
+        p.attack_score + p.target_defense_score
+
+
+    --========================================================
     -- FINAL ATTACK-BUFF CLASSIFICATION
     --========================================================
     --
-    -- The important distinction:
-    --
     -- HIGH means:
     --
-    --      "We have enough major Attack support that a
-    --       high-buff/PDL-oriented WS set may be appropriate."
+    --      "The combined player-buff + target-defense
+    --       environment is strong enough that a high-buff/PDL-
+    --       oriented WS set may be appropriate."
     --
-    -- It DOES NOT guarantee that Attack is capped against the
-    -- current monster.
-    --
-    -- Target Defense is unknown.
-    --
+    -- It still does NOT guarantee Attack is capped.
+    -- The score remains a heuristic, not an exact pDIF model.
     --========================================================
 
-
-    if p.attack_score >= 8 then
+    if p.effective_attack_score >= 8 then
 
         p.level = 'High'
 
-    elseif p.attack_score >= 4 then
+    elseif p.effective_attack_score >= 4 then
 
         p.level = 'Mid'
 
