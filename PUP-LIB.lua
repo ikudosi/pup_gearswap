@@ -12,9 +12,11 @@ include("WS-BuffHelpers.lua")
 --------Global Variables-------
 -------------------------------
 
-local failedManeuvers = Q{}
-local pendingManeuvers = Q{}
-local current_pet_tp = 0
+-- Auto Maneuver state is tracked as desired stack counts vs. actual buff counts.
+-- Example: desiredManeuvers["Fire Maneuver"] = 2 means AutoMan will maintain 2 Fire Maneuvers.
+local desiredManeuvers = {}
+local pendingManeuvers = {}
+local maneuverProfileInitialized = false
 local current_pet_tp = 0
 local pet_is_nuking = false
 local skillchain_active = false
@@ -146,8 +148,8 @@ keybinds_off['key_bind_predict_automaton_setup'] = keybinds_on['key_bind_predict
     hub_pet_info_std = [[ \cs(255, 115, 0)======= Pet Info ==========\cr
 - \cs(0, 0, 125)HP :\cr ${pet_current_hp|0}/${pet_max_hp|0}
 - \cs(0, 125, 0)MP :\cr ${pet_current_mp|0}/${pet_max_mp|0}
-- \cs(125, 125, 0)WS Buff Eff. :\cr ${ws_buff_level}
 - \cs(255, 0, 0)TP :\cr ${pet_current_tp|0000|%04d}
+- \cs(125, 125, 0)WS Buff Eff. :\cr ${ws_buff_level}
 ]]
 
     hub_pet_skills_std = [[ \cs(255, 115, 0)======= Pet Skills ========\cr
@@ -266,8 +268,8 @@ function validateTextInformation()
         texts.update(main_text_hub, keybinds_off)
     end
 
-    main_text_hub.maneuver_queue = failedManeuvers:length()
-    main_text_hub.current_queue = currentManeuvers:length()
+    main_text_hub.maneuver_queue = get_missing_maneuver_count()
+    main_text_hub.current_queue = get_active_maneuver_count()
 	
 	main_text_hub.ws_buff_level = ws_buff_level
 
@@ -589,9 +591,9 @@ function determinePuppetType()
 end
 
 function reset_timers()
-    failedManeuvers:clear()
-	pendingManeuvers:clear()
-    currentManeuvers:clear()
+    desiredManeuvers = {}
+    pendingManeuvers = {}
+    maneuverProfileInitialized = false
 
     if areas.Cities:contains(world.area) then
         texts.hide(main_text_hub)
@@ -724,21 +726,13 @@ Modifier["Knockout"] = "AGI"
 
 function job_aftercast(spell, action, spellMap, eventArgs)
 
-    --Maneuver was interrupted and we don't have up to 3 already in queue then add this to be retried
-    if string.find(spell.english, "Maneuver") and spell.interrupted == true and failedManeuvers:length() < 3 then
-		local alreadyPending = false
-
-		for i = 1, pendingManeuvers:length() do
-			if pendingManeuvers[i] == spell.english then
-				alreadyPending = true
-				break 
-			end
-		end
-
-		if not alreadyPending then
-			failedManeuvers:push(spell)
-		end
-	end
+    -- If an AutoMan maneuver attempt was interrupted, release the pending marker.
+    -- The reconciliation loop will retry it on a later tick.
+    if string.find(spell.english, "Maneuver") and spell.interrupted == true then
+        if (pendingManeuvers[spell.english] or 0) > 0 then
+            pendingManeuvers[spell.english] = pendingManeuvers[spell.english] - 1
+        end
+    end
 	
     if pet.isvalid and ((state.PetModeCycle.value ~= 'MAGE' and state.PetModeCycle.value ~= "TANK") and  state.PetStyleCycleDD.value ~= 'SPAM') then
         if SC[pet.frame][spell.english] and pet.tp >= 850 and Pet_State == "Engaged" then
@@ -852,12 +846,137 @@ function job_pet_aftercast(spell)
 	--equip(sets.engaged[state.OffenseMode.current][state.HybridMode.current])
 end
 
---Anytime you change equipment you need to set eventArgs.handled or else you may get overwritten
-currentManeuvers = Q{}
+-- Auto Maneuver reconciliation
+--
+-- GearSwap's buffactive stores repeated buffs as a count (e.g. two Marches == 2).
+-- We use the same model for Maneuvers so Fire x2 is different from Fire x1.
+local maneuverNames = {
+    "Fire Maneuver",
+    "Ice Maneuver",
+    "Wind Maneuver",
+    "Earth Maneuver",
+    "Thunder Maneuver",
+    "Water Maneuver",
+    "Light Maneuver",
+    "Dark Maneuver"
+}
+
+function get_active_maneuver_stack(name)
+    local count = buffactive[name]
+
+    if count == nil then
+        count = buffactive[name:lower()]
+    end
+
+    if count == true then
+        return 1
+    end
+
+    return tonumber(count) or 0
+end
+
+function get_active_maneuver_count()
+    local total = 0
+
+    for _, maneuver in ipairs(maneuverNames) do
+        total = total + get_active_maneuver_stack(maneuver)
+    end
+
+    return total
+end
+
+function get_missing_maneuver_count()
+    local missing = 0
+
+    for maneuver, desiredCount in pairs(desiredManeuvers) do
+        local actualCount = get_active_maneuver_stack(maneuver)
+        local difference = desiredCount - actualCount
+
+        if difference > 0 then
+            missing = missing + difference
+        end
+    end
+
+    return missing
+end
+
+function initialize_maneuver_profile()
+    desiredManeuvers = {}
+    pendingManeuvers = {}
+
+    for _, maneuver in ipairs(maneuverNames) do
+        local count = get_active_maneuver_stack(maneuver)
+        if count > 0 then
+            desiredManeuvers[maneuver] = count
+        end
+    end
+
+    maneuverProfileInitialized = true
+end
+
+function maneuver_recast_ready(maneuver)
+    for id, ability in pairs(res.job_abilities) do
+        if ability.en == maneuver then
+            local recasts = windower.ffxi.get_ability_recasts()
+            return (recasts[ability.recast_id] or 0) <= 0
+        end
+    end
+
+    -- If the resource entry cannot be found, let the game process the command.
+    return true
+end
+
+function find_missing_maneuver()
+    -- Do not exceed PUP's three active maneuver slots.
+    if get_active_maneuver_count() >= 3 then
+        return nil
+    end
+
+    -- Walk in a deterministic order rather than pairs(), so the behavior is stable.
+    for _, maneuver in ipairs(maneuverNames) do
+        local desiredCount = desiredManeuvers[maneuver] or 0
+        local actualCount = get_active_maneuver_stack(maneuver)
+        local pendingCount = pendingManeuvers[maneuver] or 0
+
+        -- Account for a cast already in flight, so we don't issue duplicate casts.
+        if actualCount + pendingCount < desiredCount then
+            return maneuver
+        end
+    end
+
+    return nil
+end
+
+function reconcile_maneuvers()
+    if not state.AutoMan.value
+        or not maneuverProfileInitialized
+        or player.hp <= 0
+        or not pet.isvalid
+        or areas.Cities:contains(world.area)
+    then
+        return
+    end
+
+    if midaction() then
+        return
+    end
+
+    local maneuver = find_missing_maneuver()
+    if not maneuver then
+        return
+    end
+
+    if not maneuver_recast_ready(maneuver) then
+        return
+    end
+
+    pendingManeuvers[maneuver] = (pendingManeuvers[maneuver] or 0) + 1
+    send_command('input /ja "' .. maneuver .. '" <me>')
+end
 
 function job_buff_change(status, gain, eventArgs)
 
-	ws_buff_level = get_ws_buff_level()
+    ws_buff_level = get_ws_buff_level()
     
     if status == "sleep" and gain then
         equip(set_combine(sets.defense.PDT, {neck = "Opo-opo Necklace"}))
@@ -868,47 +987,23 @@ function job_buff_change(status, gain, eventArgs)
         send_command("input /p I have avoided the grips of ~~~DOOM~~~ may Altana be praised! ")
     end
 
-    if status:contains("Maneuver") and gain == false then
-    -- Remove the exact maneuver that expired.
-		for i = 1, currentManeuvers:length() do
-			if currentManeuvers[i] == status then
-				currentManeuvers:remove(i)
-				break
-			end
-		end
+    if not status:contains("Maneuver") then
+        return
+    end
 
-		-- Remember exactly which maneuver expired.
-		if state.AutoMan.value
-			and player.hp > 0
-			and pet.isvalid
-			and not areas.Cities:contains(world.area)
-		then
-			pendingManeuvers:push(status)
-		end
-	end
-
-	if status:contains("Maneuver") and gain then
-		-- Only add the maneuver once it actually exists.
-		if currentManeuvers:length() < 3 then
-			currentManeuvers:push(status)
-		end
-
-        -- Remove one matching pending maneuver, if this gain came from one.
-        for i = 1, pendingManeuvers:length() do
-            if pendingManeuvers[i] == status then
-                pendingManeuvers:remove(i)
-                break
+    if gain then
+        -- A gain caused by our own reconciliation satisfies one pending cast.
+        if (pendingManeuvers[status] or 0) > 0 then
+            pendingManeuvers[status] = pendingManeuvers[status] - 1
+            if pendingManeuvers[status] <= 0 then
+                pendingManeuvers[status] = nil
             end
+        elseif state.AutoMan.value and maneuverProfileInitialized then
+            -- A manually applied maneuver changes the desired profile to the new
+            -- actual stack count. This lets AutoMan continue maintaining it.
+            desiredManeuvers[status] = get_active_maneuver_stack(status)
         end
-
-        -- A successful application also satisfies one previously failed attempt.
-        for i = 1, failedManeuvers:length() do
-            if failedManeuvers[i].english == status then
-                failedManeuvers:remove(i)
-                break
-            end
-        end
-	end
+    end
 end
 
 -- Toggles -- SE Macros: /console gs c "command"
@@ -922,6 +1017,16 @@ function job_self_command(command, eventArgs)
 	
     if command[1]:lower() == "automan" then --Toggles AutoMan
         state.AutoMan:toggle()
+
+        if state.AutoMan.value then
+            -- Capture the current maneuver stacks as the profile to maintain.
+            initialize_maneuver_profile()
+        else
+            desiredManeuvers = {}
+            pendingManeuvers = {}
+            maneuverProfileInitialized = false
+        end
+
         validateTextInformation()
 
     elseif command[1]:lower() == "predict" then --Predict Command
@@ -971,7 +1076,9 @@ function job_self_command(command, eventArgs)
         validateTextInformation()
     elseif command[1]:lower() == "clear" then
 		pet_is_nuking = false
-        failedManeuvers:clear()
+        desiredManeuvers = {}
+        pendingManeuvers = {}
+        maneuverProfileInitialized = false
 		handle_equipping_gear(player.status, pet.status)
 		msg('Maneuvers have been reset')
 	elseif command[1] == 'setWSFTP' then
@@ -1035,32 +1142,13 @@ windower.register_event(
 			
             time_start = os.time()
 
-            -- Retry maneuver applications. Only issue one maneuver command per tick.
-            if not midaction() then
-                -- Expired maneuvers have priority. Remove the pending entry when the
-                -- actual attempt is made; if it is interrupted, job_aftercast()
-                -- will place it into failedManeuvers.
-                if pendingManeuvers:length() > 0 then
-                    local maneuver = pendingManeuvers[1]
+            -- Reconcile the desired maneuver stack counts against the actual
+            -- buff counts. This repairs missing/expired maneuvers without relying
+            -- on a queue surviving perfectly for hours.
+            reconcile_maneuvers()
 
-                    if currentManeuvers:length() < 3 then
-                        pendingManeuvers:remove(1)
-                        send_command('input /ja "' .. maneuver .. '" <me>')
-                    end
-
-                -- Only retry an interrupted maneuver when there is no pending
-                -- replacement waiting to be applied.
-                elseif failedManeuvers:length() > 0 and currentManeuvers:length() < 3 then
-                    local ability = failedManeuvers:pop()
-
-                    --check recast timer to make sure we can actually use ability
-                    if windower.ffxi.get_ability_recasts()[res.job_abilities[ability.id].recast_id] <= 0 then
-                        send_command('wait 0.5;input /ja "' .. ability.name .. '" <me>')
-                    else
-                        --if we cant recast then push it back on to try again
-                        failedManeuvers:push(ability)
-                    end
-                end
+            if state.AutoMan.value and not maneuverProfileInitialized then
+                initialize_maneuver_profile()
             end
 
             if pet.isvalid and player.hpp > 0 then
