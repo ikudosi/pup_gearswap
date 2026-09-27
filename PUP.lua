@@ -163,7 +163,7 @@ function user_setup()
     send_command("bind !d gs c toggle LockPetDT")
     send_command("bind !f6 gs c predict")
     send_command("bind home gs c toggle setftp")
-    send_command("bind PAGEUP gs c toggle autodeploy")
+    send_command("bind PAGEUP gs c toggle AutoDeploy")
     send_command("bind PAGEDOWN gs c hide keybinds")
     send_command("bind = gs c clear")
 
@@ -171,8 +171,8 @@ function user_setup()
 	send_command('@wait 4;input /lockstyleset 1')
 
     -- Adjust the X (horizontal) and Y (vertical) position here to adjust the window
-    pos_x = 2100
-    pos_y = 400
+    pos_x = 2174
+    pos_y = 1000
     setupTextWindow(pos_x, pos_y)
     
 end
@@ -196,7 +196,6 @@ end
 
 function job_setup()
     include("PUP-LIB.lua")
-	include("WS-BuffHelpers.lua")
 end
 
 function init_gear_sets()
