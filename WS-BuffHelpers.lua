@@ -448,3 +448,25 @@ function is_low_ws_buff()
 
     return get_ws_buff_profile().level == 'Low'
 end
+
+function apply_ws_buff_set(ws_sets, spell)
+
+    if spell.type ~= 'WeaponSkill' then
+        return false
+    end
+
+    local ws_set = ws_sets[spell.english]
+
+    if not ws_set then
+        return false
+    end
+
+    local buff_level = get_ws_buff_level()
+
+    if ws_set[buff_level] then
+        equip(ws_set[buff_level])
+        return true
+    end
+
+    return false
+end
