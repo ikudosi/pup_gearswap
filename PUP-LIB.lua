@@ -960,7 +960,21 @@ function reconcile_maneuvers()
     if midaction() then
         return
     end
+	
+	local activeManeuverCount = get_active_maneuver_count()
 
+	if activeManeuverCount >= 3 then
+		-- Three active maneuvers is the hard cap. If the desired profile
+		-- is somehow out of sync, accept the current three as the profile
+		-- instead of leaving a permanent phantom maneuver in the HUD queue.
+		if get_missing_maneuver_count() > 0 then
+			initialize_maneuver_profile()
+		else
+			pendingManeuvers = {}
+		end
+		return
+	end
+	
     local maneuver = find_missing_maneuver()
     if not maneuver then
         return
