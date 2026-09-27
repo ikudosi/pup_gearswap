@@ -775,6 +775,9 @@ function job_status_change(new, old)
                 currentTargetedMonster = windower.ffxi.get_mob_by_target('t').id
             end
 
+            autoDeployPending = true
+            autoDeployRetryTime = os.time() + 2
+            autoDeployRetryCount = 0
             send_command('wait 1; input /pet "Deploy" <t>')
         end
     else
@@ -978,6 +981,9 @@ petWeaponSkillRecast = 0
 petWeaponSkillTime = 0
 currentTargetedMonster = 0
 previousTargetedMonster = 0
+autoDeployPending = false
+autoDeployRetryTime = 0
+autoDeployRetryCount = 0
 
 --List used to track the pet TP
 track_pet_tp = L{}
@@ -1109,16 +1115,41 @@ windower.register_event(
                     previousTargetedMonster = currentTargetedMonster
 
                     --Get the new current target
-                    if windower.ffxi.get_mob_by_target('t') then
-                        currentTargetedMonster = windower.ffxi.get_mob_by_target('t').id
+                    local target = windower.ffxi.get_mob_by_target('t')
+                    if target then
+                        currentTargetedMonster = target.id
+                    end
+
+                    -- A fast engage/WS can happen before the first Deploy command is
+                    -- actually processed.  If the pet is still idle after the initial
+                    -- delay, retry Deploy once.  This is deliberately gated so we do
+                    -- not spam Deploy every second.
+                    if autoDeployPending and os.time() >= autoDeployRetryTime then
+                        if pet.status ~= const_stateEngaged and currentTargetedMonster ~= 0 then
+                            if autoDeployRetryCount < 2 then
+                                msg('Auto Deploy retry - Pet was not deployed')
+                                send_command('input /pet "Deploy" <t>')
+                                autoDeployRetryCount = autoDeployRetryCount + 1
+                                autoDeployRetryTime = os.time() + 2
+                            else
+                                autoDeployPending = false
+                            end
+                        else
+                            autoDeployPending = false
+                        end
                     end
 
                     --If the monster ID's are not equal then we changed monsters
                     if previousTargetedMonster ~= currentTargetedMonster then
                         msg('Auto Deploying Pet')
-                        send_command('wait 2;input /pet "Deploy" <t>')
+                        autoDeployPending = true
+                        autoDeployRetryTime = os.time() + 2
+                        autoDeployRetryCount = 0
+                        send_command('wait 1;input /pet "Deploy" <t>')
                     end
 
+                else
+                    autoDeployPending = false
                 end
                 --Now we check if we need to lock our back for CP
                 --if Master_State == const_stateEngaged and state.CP.value == true then 
