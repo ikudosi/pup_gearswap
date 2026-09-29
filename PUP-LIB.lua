@@ -1010,8 +1010,6 @@ function reconcile_maneuvers()
 end
 
 function job_buff_change(status, gain, eventArgs)
-
-    ws_buff_level = get_ws_buff_level()
     
     if status == "sleep" and gain then
         equip(set_combine(sets.defense.PDT, {neck = "Opo-opo Necklace"}))
@@ -1156,6 +1154,8 @@ windower.register_event(
         if os.time() > time_start then
 			
             time_start = os.time()
+			
+			ws_buff_level = get_ws_buff_level()
 
             -- Reconcile the desired maneuver stack counts against the actual
             -- buff counts. This repairs missing/expired maneuvers without relying
