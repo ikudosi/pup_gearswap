@@ -782,8 +782,11 @@ function job_status_change(new, old)
 
             --Gets the current target we have focus on and make sure it isn't null
             --We are also keeping track of the current monster just in case we auto switch
-            if windower.ffxi.get_mob_by_target('t').id then
-                currentTargetedMonster = windower.ffxi.get_mob_by_target('t').id
+            -- The target can briefly be nil during the engage transition.
+            -- Do not index .id until we have a valid target object.
+            local target = windower.ffxi.get_mob_by_target('t')
+            if target and target.id then
+                currentTargetedMonster = target.id
             end
 
             autoDeployPending = true
