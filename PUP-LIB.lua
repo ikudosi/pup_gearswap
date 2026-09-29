@@ -16,7 +16,12 @@ include("WS-BuffHelpers.lua")
 -- Example: desiredManeuvers["Fire Maneuver"] = 2 means AutoMan will maintain 2 Fire Maneuvers.
 local desiredManeuvers = {}
 local pendingManeuvers = {}
+local pendingManeuverTimes = {}
 local maneuverProfileInitialized = false
+
+-- A pending maneuver is only a failsafe marker. The normal reconciliation
+-- loop already runs about once per second, so this should not delay recovery.
+local pendingManeuverTimeout = 1
 local pet_is_nuking = false
 local skillchain_active = false
 
@@ -904,6 +909,7 @@ end
 function initialize_maneuver_profile()
     desiredManeuvers = {}
     pendingManeuvers = {}
+    pendingManeuverTimes = {}
 
     for _, maneuver in ipairs(maneuverNames) do
         local count = get_active_maneuver_stack(maneuver)
@@ -958,6 +964,16 @@ function reconcile_maneuvers()
         return
     end
 
+    -- Clear stale pending markers. This is only a failsafe; the normal
+    -- reconciliation loop still runs about once per second.
+    local now = os.time()
+    for maneuver, started in pairs(pendingManeuverTimes) do
+        if now - started >= pendingManeuverTimeout then
+            pendingManeuvers[maneuver] = nil
+            pendingManeuverTimes[maneuver] = nil
+        end
+    end
+
     if midaction() then
         return
     end
@@ -986,6 +1002,7 @@ function reconcile_maneuvers()
     end
 
     pendingManeuvers[maneuver] = (pendingManeuvers[maneuver] or 0) + 1
+    pendingManeuverTimes[maneuver] = os.time()
     send_command('input /ja "' .. maneuver .. '" <me>')
 end
 
@@ -1012,12 +1029,20 @@ function job_buff_change(status, gain, eventArgs)
             pendingManeuvers[status] = pendingManeuvers[status] - 1
             if pendingManeuvers[status] <= 0 then
                 pendingManeuvers[status] = nil
+                pendingManeuverTimes[status] = nil
             end
         elseif state.AutoMan.value and maneuverProfileInitialized then
             -- A manually applied maneuver changes the desired profile to the new
             -- actual stack count. This lets AutoMan continue maintaining it.
             desiredManeuvers[status] = get_active_maneuver_stack(status)
         end
+    else
+        -- A maneuver disappearing means it is genuinely missing now.
+        -- Drop any old pending marker so the existing ~1s reconciliation
+        -- loop can immediately make it eligible for reapplication.
+        pendingManeuvers[status] = nil
+        pendingManeuverTimes[status] = nil
+
     end
 end
 
