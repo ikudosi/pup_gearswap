@@ -775,25 +775,6 @@ function job_status_change(new, old)
     if new == "Engaged" then
         Master_State = const_stateEngaged
         TotalSCalc()
-
-        --If we have AutoDeploy turned on and our pet is out then we will auto deploy
-        if state.AutoDeploy.value == true and pet.isvalid then
-            msg('Auto Deploying Pet')
-
-            --Gets the current target we have focus on and make sure it isn't null
-            --We are also keeping track of the current monster just in case we auto switch
-            -- The target can briefly be nil during the engage transition.
-            -- Do not index .id until we have a valid target object.
-            local target = windower.ffxi.get_mob_by_target('t')
-            if target and target.id then
-                currentTargetedMonster = target.id
-            end
-
-            autoDeployPending = true
-            autoDeployRetryTime = os.time() + 2
-            autoDeployRetryCount = 0
-            send_command('wait 1; input /pet "Deploy" <t>')
-        end
     else
         Master_State = const_stateIdle
         
@@ -1140,11 +1121,6 @@ petWeaponSkillLock = false
 startedPetWeaponSkillTimer = false
 petWeaponSkillRecast = 0
 petWeaponSkillTime = 0
-currentTargetedMonster = 0
-previousTargetedMonster = 0
-autoDeployPending = false
-autoDeployRetryTime = 0
-autoDeployRetryCount = 0
 
 windower.register_event(
     "prerender",
@@ -1173,60 +1149,11 @@ windower.register_event(
                 Master_State = player.status
 
                 --If we are in auto deploy and engaged we are going check if we have changed targets
-                if Master_State == const_stateEngaged and state.AutoDeploy.value == true then
-                    --Save the currentTarget as a previous
-                    previousTargetedMonster = currentTargetedMonster
-
-                    --Get the new current target
-                    local target = windower.ffxi.get_mob_by_target('t')
-                    if target then
-                        currentTargetedMonster = target.id
-                    end
-
-                    -- A fast engage/WS can happen before the first Deploy command is
-                    -- actually processed.  If the pet is still idle after the initial
-                    -- delay, retry Deploy once.  This is deliberately gated so we do
-                    -- not spam Deploy every second.
-                    if autoDeployPending and os.time() >= autoDeployRetryTime then
-                        if pet.status ~= const_stateEngaged and currentTargetedMonster ~= 0 then
-                            if autoDeployRetryCount < 2 then
-                                msg('Auto Deploy retry - Pet was not deployed')
-                                send_command('input /pet "Deploy" <t>')
-                                autoDeployRetryCount = autoDeployRetryCount + 1
-                                autoDeployRetryTime = os.time() + 2
-                            else
-                                autoDeployPending = false
-                            end
-                        else
-                            autoDeployPending = false
-                        end
-                    end
-
-                    --If the monster ID's are not equal then we changed monsters
-                    if previousTargetedMonster ~= currentTargetedMonster then
-                        msg('Auto Deploying Pet')
-                        autoDeployPending = true
-                        autoDeployRetryTime = os.time() + 2
-                        autoDeployRetryCount = 0
-                        send_command('wait 1;input /pet "Deploy" <t>')
-                    end
-
+                if Master_State == const_stateEngaged and state.AutoDeploy.value == true and pet.status ~= const_stateEngaged then
+                    send_command('input /pet "Deploy" <t>')
                 else
                     autoDeployPending = false
                 end
-                --Now we check if we need to lock our back for CP
-                --if Master_State == const_stateEngaged and state.CP.value == true then 
-                    --monsterToCheck = windower.ffxi.get_mob_by_target('t') 
-                    --if monsterToCheck then -- Sanity Check 
- 
-                        --if monsterToCheck.hpp < 25 then --Check mobs HP Percentage if below 25 then equip CP cape 
-                           -- equip({ back = CP_CAPE }) 
-                            --disable("back") --Lock back till we disengage
-                        --else 
-                            --enable("back") --Else make sure the back is enabled
-                        --end 
-                    --end 
-                --end 
             end
             
             if state.PetModeCycle.value == const_tank and Pet_State == const_stateEngaged and state.PetModeCycle.value:lower() == "tank" then
